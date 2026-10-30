@@ -600,21 +600,21 @@ function getClosureDateMsForOpening(closure: any): number {
 }
 
 function getClosureNextShiftBase(closure: any): number {
+  // Un cero explícito en el cierre es válido. No recuperar saldos esperados
+  // de caja ni valores de cierres antiguos como base de un nuevo turno.
   const candidates = [
     closure?.baseParaSiguienteTurno,
     closure?.baseSugeridaSiguienteTurno,
     closure?.nextShiftBase,
     closure?.dineroDejadoEnCaja,
-    closure?.dineroFisicoContado,
-    closure?.cajaQueDebeQuedar,
-    closure?.totalEsperadoEfectivo
+    closure?.dineroFisicoContado
   ];
 
   for (const value of candidates) {
-    const n = Number(value || 0);
-    if (Number.isFinite(n) && n > 0) {
-      if (n === 668500) return 0;
-      return n;
+    if (value === undefined || value === null || value === '') continue;
+    const n = Number(value);
+    if (Number.isFinite(n) && n >= 0) {
+      return n === 668500 ? 0 : n;
     }
   }
 
@@ -655,8 +655,9 @@ function getLatestClosureForOpening(closures: ShiftClosure[]): ShiftClosure | nu
   }
 
   const sorted = Array.from(byId.values()).sort((a, b) => getClosureDateMsForOpening(b) - getClosureDateMsForOpening(a));
-  const latestWithBase = sorted.find((closure) => getClosureNextShiftBase(closure) > 0) || sorted[0];
-  return latestWithBase ? normalizeClosureForNextOpening(latestWithBase) : null;
+  // Usar el cierre más reciente, aunque su valor de entrega sea cero.
+  const latest = sorted[0];
+  return latest ? normalizeClosureForNextOpening(latest) : null;
 }
 
 
