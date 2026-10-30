@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Reglas maestras para colecciones principales del Sistema POS Hotel Kodiak
+    match /hotel_users/{userId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_rooms/{roomId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_clients/{clientId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_products/{productId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_sales/{saleId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_expenses/{expenseId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_shifts/{shiftId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_reservations/{reservationId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_settings/{settingId} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_shift_closures/{closureId} {
+      allow read, write: if signedIn();
+    }
+
+    // Colecciones de soporte, movimientos y auditoría operativa
+    match /hotel_movements/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_inventory_movements/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_stock_movements/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_stock_alerts/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_audit_logs/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_extra_hours/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_checkout_events/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_cash_drawer_logs/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_printer_errors/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /hotel_printer_logs/{id} {
+      allow read, write: if signedIn();
+    }
+
+    // Regla global comodín para permitir operaciones de usuarios autenticados
+    match /{document=**} {
+      allow read, write: if signedIn();
+    }
+  }
+}
+
