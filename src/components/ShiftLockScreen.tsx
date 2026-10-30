@@ -84,7 +84,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
   const [selectedEmployee, setSelectedEmployee] = useState<string>('ALICIA');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [baseCashInput, setBaseCashInput] = useState<string>('');
+  const [baseCashInput, setBaseCashInput] = useState<string>('0');
   const [obs, setObs] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [initialDrawerOpened, setInitialDrawerOpened] = useState<boolean>(false);
@@ -102,10 +102,9 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       return;
     }
 
-    const suggested = getClosureSuggestedBase(lastClosure);
-    // También precargar explícitamente $0. Antes el 0 se ignoraba y el sistema
-    // terminaba tomando valores positivos viejos como $339.200.
-    setBaseCashInput(formatMoneyInput(suggested));
+    // Cada apertura inicia en cero. El último cierre permanece como referencia
+    // contable y no se utiliza para precargar la nueva base.
+    setBaseCashInput('0');
     setInitialDrawerOpened(false);
 
     const receivingEmployee = findEmployeeForOpening(lastClosure);
@@ -377,13 +376,13 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
                 setBaseCashInput(formatMoneyInput(e.target.value));
                 setInitialDrawerOpened(false);
               }}
-              placeholder={hasPreviousClosure ? moneyText(suggestedBaseFromClosure).replace('$', '') : 'Ej. 100.000'}
+              placeholder="0"
               className={`w-full rounded-xl bg-slate-950 border px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:ring-1 ${openingWithDifferentBase ? 'border-amber-500 focus:border-amber-400 focus:ring-amber-500/30' : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/30'}`}
             />
             {hasPreviousClosure ? (
-              <span className="text-[10px] text-emerald-400 block">Sugerido por último cierre: {moneyText(suggestedBaseFromClosure)}</span>
+              <span className="text-[10px] text-emerald-400 block">Último cierre (solo referencia): {moneyText(suggestedBaseFromClosure)}. Base predeterminada: $0.</span>
             ) : (
-              <span className="text-[10px] text-slate-500 block">Digite la base inicial física contada en caja.</span>
+              <span className="text-[10px] text-slate-500 block">Base predeterminada: $0. Ajústela si el conteo físico indica otro valor.</span>
             )}
             {openingWithDifferentBase && (
               <div className={`text-[10px] font-bold rounded-lg p-2 ${baseDifference >= 0 ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>
