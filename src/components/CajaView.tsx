@@ -51,12 +51,12 @@ export const CajaView: React.FC<CajaProps> = ({
   const currentShiftExpenses = (Array.isArray(expenses) ? expenses : []).filter((e) => e.shiftId === activeShift.id);
 
   // Totals calculations
-  const totalSalesCash = currentShiftSales.filter((s) => (s.metodoPago || '').toLowerCase() === 'efectivo').reduce((sum, s) => sum + s.total, 0);
-  const totalSalesTransfer = currentShiftSales.filter((s) => (s.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, s) => sum + s.total, 0);
+  const totalSalesCash = currentShiftSales.filter((s) => (s.metodoPago || '').toLowerCase() === 'efectivo').reduce((sum, s) => sum + Number(s.total || 0), 0);
+  const totalSalesTransfer = currentShiftSales.filter((s) => (s.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, s) => sum + Number(s.total || 0), 0);
   const totalSales = totalSalesCash + totalSalesTransfer;
 
-  const totalExpensesCash = currentShiftExpenses.filter((e) => (e.metodoPago || '').toLowerCase() === 'efectivo').reduce((sum, e) => sum + e.valor, 0);
-  const totalExpensesTransfer = currentShiftExpenses.filter((e) => (e.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, e) => sum + e.valor, 0);
+  const totalExpensesCash = currentShiftExpenses.filter((e) => (e.metodoPago || '').toLowerCase() === 'efectivo').reduce((sum, e) => sum + Number(e.valor || 0), 0);
+  const totalExpensesTransfer = currentShiftExpenses.filter((e) => (e.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, e) => sum + Number(e.valor || 0), 0);
   const totalExpenses = totalExpensesCash + totalExpensesTransfer;
 
   // Base operativa siempre 0, incluso si un turno viejo traía un valor heredado.
