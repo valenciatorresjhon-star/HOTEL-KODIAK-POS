@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ShieldCheck, Coins, Package, ArrowRight, CheckCircle, ClipboardList, Unlock, AlertTriangle, ReceiptText } from 'lucide-react';
-import { Shift, Sale, Expense, Product, ShiftClosure, ProductInventoryClosure, ALLOWED_EMPLOYEES, getEmployeeProfile, getEmployeeFullName, isProductVisible } from '../types';
+import { Shift, Sale, Expense, CashMovement, Product, ShiftClosure, ProductInventoryClosure, ALLOWED_EMPLOYEES, getEmployeeProfile, getEmployeeFullName, isProductVisible } from '../types';
 import { formatCop } from '../utils/storage';
 import { openBrowserPrintWindow, setBrowserPrintWindow, printAndOpenDrawerForPayrollWithdrawal, printShiftClosureReceipt } from '../services/printerService';
 import { auth } from '../firebase';
@@ -54,6 +54,7 @@ interface CierreProps {
   activeShift: Shift;
   sales: Sale[];
   expenses: Expense[];
+  cashMovements: CashMovement[];
   products: Product[];
   onConfirmClosure: (closure: ShiftClosure) => void;
   closureInProgress?: boolean;
@@ -65,6 +66,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
   activeShift,
   sales = [],
   expenses = [],
+  cashMovements = [],
   products = [],
   onConfirmClosure,
   closureInProgress = false,
@@ -76,6 +78,10 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
   );
   const currentShiftExpenses = (Array.isArray(expenses) ? expenses : []).filter((e) => e.shiftId === activeShift.id);
   const safeProducts = (Array.isArray(products) ? products : []).filter(isProductVisible);
+  const cashEntries = (Array.isArray(cashMovements) ? cashMovements : []).filter((movement) =>
+    movement.shiftId === activeShift.id && movement.tipo === 'entrada_efectivo_no_venta'
+  );
+  const totalCashEntries = cashEntries.reduce((sum, movement) => sum + Number(movement.monto || 0), 0);
 
   const salesCash = currentShiftSales.filter((s) => (s.metodoPago || '').toLowerCase() === 'efectivo').reduce((sum, s) => sum + Number(s.total || 0), 0);
   const salesTransfer = currentShiftSales.filter((s) => (s.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, s) => sum + Number(s.total || 0), 0);
@@ -138,7 +144,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
   const authorizedPayroll = Math.max(0, payrollAmount + productCommission - inventoryDiscount);
   // Aplicar base contable cero a los cierres nuevos sin alterar cierres ya guardados.
   const baseInicial = 0;
-  const cashBeforePayroll = baseInicial + salesCash - expensesCash;
+  const cashBeforePayroll = baseInicial + totalCashEntries + salesCash - expensesCash;
   const cashShouldRemain = cashBeforePayroll - authorizedPayroll;
   const finalCashDifference = moneyLeftInBox - cashShouldRemain;
 
@@ -226,6 +232,16 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
     const movimientosTurno = [
       ...saleDetails.map((x) => ({ ...x, tipoMovimientoGeneral: 'venta' })),
       ...expenseDetails.map((x) => ({ ...x, tipoMovimientoGeneral: 'gasto' })),
+      ...cashEntries.map((x) => ({
+        id: x.id,
+        tipoMovimientoGeneral: 'efectivo_existente_no_venta',
+        concepto: x.concepto,
+        observacion: x.observacion,
+        total: Number(x.monto),
+        fecha: x.fecha,
+        hora: x.hora,
+        empleado: x.empleada
+      })),
       ...shortageInfo.items.map((x: any) => ({
         tipoMovimientoGeneral: 'faltante_inventario',
         concepto: `Faltante ${x.nombre}`,
@@ -248,6 +264,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
       empleadaRecibeFechaNacimiento: empRecibeProf?.fechaNacimientoTexto || '',
       baseInicial: baseInicial,
       ventasEfectivo: salesCash,
+      entradasEfectivoNoVenta: totalCashEntries,
       ventasTransferencia: salesTransfer,
       totalVentas: totalSales,
       gastosEfectivo: expensesCash,
@@ -274,6 +291,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
       productosConDiferencia: inventoryConteo.filter((x: any) => Number(x.diferencia || 0) !== 0),
       detalleVentas: saleDetails,
       detalleGastos: expenseDetails,
+      detalleEntradasEfectivoNoVenta: cashEntries,
       movimientosTurno,
       resumenCierreExtendido: {
         habitacionesUsadas: roomSales.length,
@@ -284,6 +302,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
         descuentoInventario: inventoryDiscount,
         pagoAutorizadoRetirado: authorizedPayroll,
         cajaAntesDePago: cashBeforePayroll,
+        entradasEfectivoNoVenta: totalCashEntries,
         cajaQueDebeQuedar: cashShouldRemain,
         dineroDejadoEnCaja: moneyLeftInBox,
         baseParaSiguienteTurno: 0,
@@ -547,6 +566,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-2 text-xs">
               <span className="text-[10px] text-slate-500 uppercase font-bold block">Entrega de caja después del retiro</span>
               <div className="flex justify-between"><span>Base inicial:</span><span>{formatCop(baseInicial)}</span></div>
+              <div className="flex justify-between"><span>Efectivo existente registrado:</span><span>{formatCop(totalCashEntries)}</span></div>
               <div className="flex justify-between"><span>Ventas efectivo:</span><span>{formatCop(salesCash)}</span></div>
               <div className="flex justify-between"><span>Gastos efectivo:</span><span className="text-red-400">-{formatCop(expensesCash)}</span></div>
               <div className="flex justify-between"><span>Caja antes de pago:</span><span>{formatCop(cashBeforePayroll)}</span></div>
