@@ -335,6 +335,7 @@ export interface ShiftClosure {
   empleadoRecibe: string; // Alicia, Mileidys, Paola
   baseInicial: number;
   ventasEfectivo: number;
+  entradasEfectivoNoVenta?: number;
   ventasTransferencia: number;
   totalVentas: number;
   gastosEfectivo: number;
@@ -359,6 +360,7 @@ export interface ShiftClosure {
   observaciones: string;
   detalleVentas?: any[];
   detalleGastos?: any[];
+  detalleEntradasEfectivoNoVenta?: CashMovement[];
   productosConDiferencia?: any[];
   faltantesInventario?: any[];
   movimientosTurno?: any[];
