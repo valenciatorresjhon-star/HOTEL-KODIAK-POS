@@ -70,7 +70,10 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
   closureInProgress = false,
   userProfile
 }) => {
-  const currentShiftSales = (Array.isArray(sales) ? sales : []).filter((s) => s.shiftId === activeShift.id);
+  const currentShiftSales = (Array.isArray(sales) ? sales : []).filter((s: any) =>
+    s.shiftId === activeShift.id && s.type !== 'stock_add' &&
+    s.tipoVenta !== 'inventario' && s.metodoPago !== 'N/A' && Number(s.total || 0) > 0
+  );
   const currentShiftExpenses = (Array.isArray(expenses) ? expenses : []).filter((e) => e.shiftId === activeShift.id);
   const safeProducts = (Array.isArray(products) ? products : []).filter(isProductVisible);
 
@@ -133,7 +136,8 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
   const shortageInfo = calculateInventoryShortages(inventoryConteo, safeProducts);
   const inventoryDiscount = shortageInfo.total;
   const authorizedPayroll = Math.max(0, payrollAmount + productCommission - inventoryDiscount);
-  const baseInicial = activeShift?.baseInicial === 668500 ? 0 : Number(activeShift?.baseInicial || 0);
+  // Aplicar base contable cero a los cierres nuevos sin alterar cierres ya guardados.
+  const baseInicial = 0;
   const cashBeforePayroll = baseInicial + salesCash - expensesCash;
   const cashShouldRemain = cashBeforePayroll - authorizedPayroll;
   const finalCashDifference = moneyLeftInBox - cashShouldRemain;
@@ -242,7 +246,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
       empleadaEntregaFechaNacimiento: empEntregaProf?.fechaNacimientoTexto || '',
       empleadaRecibeNombreCompleto: empRecibeProf?.nombreCompleto || getEmployeeFullName(receivingEmployee) || receivingEmployee,
       empleadaRecibeFechaNacimiento: empRecibeProf?.fechaNacimientoTexto || '',
-      baseInicial: Number(activeShift.baseInicial || 0),
+      baseInicial: baseInicial,
       ventasEfectivo: salesCash,
       ventasTransferencia: salesTransfer,
       totalVentas: totalSales,
