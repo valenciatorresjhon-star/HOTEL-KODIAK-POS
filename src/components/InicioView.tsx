@@ -84,7 +84,7 @@ export const InicioView: React.FC<InicioProps> = ({
             </div>
             <div>
               <span className="text-[10px] text-slate-500 uppercase font-semibold">Base Inicial</span>
-              <p className="text-sm font-bold text-emerald-400 mt-0.5">{formatCop(activeShift.baseInicial === 668500 ? 0 : activeShift.baseInicial)}</p>
+              <p className="text-sm font-bold text-emerald-400 mt-0.5">{formatCop(0)}</p>
             </div>
             <div>
               <span className="text-[10px] text-slate-500 uppercase font-semibold">Hora de Apertura</span>
