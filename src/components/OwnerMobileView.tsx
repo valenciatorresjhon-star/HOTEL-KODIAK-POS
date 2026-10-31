@@ -28,7 +28,7 @@ import {
   Share2,
   FileSpreadsheet
 } from 'lucide-react';
-import { Room, Client, Product, Sale, Expense, CashMovement, Shift, ShiftClosure, Reservation, FirebaseUser, isProductVisible } from '../types';
+import { Room, Client, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, isProductVisible } from '../types';
 import { formatCop, formatSafeDate, getTodayColombia } from '../utils/storage';
 import { isFirebaseConfigured, db, auth } from '../firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -432,7 +432,6 @@ interface OwnerMobileViewProps {
   products: Product[];
   sales: Sale[];
   expenses: Expense[];
-  cashMovements: CashMovement[];
   shifts: Shift[];
   closures: ShiftClosure[];
   reservations: Reservation[];
@@ -450,7 +449,6 @@ export function OwnerMobileView({
   products,
   sales,
   expenses,
-  cashMovements,
   shifts,
   closures,
   reservations,
@@ -1108,12 +1106,8 @@ export function OwnerMobileView({
 
     const totalGastos = expensesToday.reduce((acc, curr) => acc + getMoneyValue(curr.valor), 0);
     const gananciaNeta = ingresosTotales - totalGastos;
-    const entradasNoVenta = (Array.isArray(cashMovements) ? cashMovements : [])
-      .filter((m) => m.tipo === 'entrada_efectivo_no_venta' &&
-        (activeShiftId ? m.shiftId === activeShiftId : isToday(m.createdAt, m.fecha)))
-      .reduce((sum, m) => sum + Number(m.monto || 0), 0);
     const baseInicialActiva = 0; // Base contable del turno: siempre cero.
-    const cajaFisicaEsperada = baseInicialActiva + entradasNoVenta + ingresosEfectivo - gastosEfectivo;
+    const cajaFisicaEsperada = baseInicialActiva + ingresosEfectivo - gastosEfectivo;
 
     // Room stats
     const totalRooms = rooms.length;
@@ -1160,7 +1154,7 @@ export function OwnerMobileView({
       closuresToday,
       scopeLabel: activeShiftId ? 'turno activo' : 'día'
     };
-  }, [rooms, liveInventoryProducts, sales, expenses, cashMovements, shifts, closures, reservations]);
+  }, [rooms, liveInventoryProducts, sales, expenses, shifts, closures, reservations]);
 
 
   const selectedClosureBreakdown = useMemo(() => {

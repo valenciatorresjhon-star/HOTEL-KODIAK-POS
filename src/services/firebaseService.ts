@@ -29,8 +29,7 @@ import {
   Client, 
   Product, 
   Sale, 
-  Expense,
-  CashMovement,
+  Expense, 
   Shift, 
   ShiftClosure, 
   Reservation, 
@@ -1429,15 +1428,6 @@ export const saveSaleAndDecrementStock = async (sale: Sale, productToDecrement?:
     upsertLocalDocument('hotel_sales', saleId, saleData, true);
     queuePendingSync('hotel_sales', saleId, saleData, 'set', true);
   }
-};
-
-// Registrar entradas de efectivo existentes separadas de las ventas.
-// Cada entrada queda vinculada al turno y conserva su justificación.
-export const saveCashMovementToFirestore = async (movement: CashMovement): Promise<void> => {
-  if (!movement.shiftId || !movement.id || !Number.isFinite(movement.monto) || movement.monto <= 0) {
-    throw new Error('Movimiento de caja inválido.');
-  }
-  await saveDocumentSafely('hotel_cash_movements', movement.id, movement, 'create');
 };
 
 // Save Expense

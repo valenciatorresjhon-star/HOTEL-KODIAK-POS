@@ -17,7 +17,7 @@ import {
   Bell
 } from 'lucide-react';
 
-import { Room, Client, Product, Sale, Expense, CashMovement, Shift, ShiftClosure, Reservation, FirebaseUser, INITIAL_ROOMS_DATA, INITIAL_PRODUCTS_DATA, getEmployeeProfile, getEmployeeFullName, isProductVisible, isProductArchivedOrHidden, normalizeProductName, matchOfficialProduct, getCanonicalProductName } from './types';
+import { Room, Client, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, INITIAL_ROOMS_DATA, INITIAL_PRODUCTS_DATA, getEmployeeProfile, getEmployeeFullName, isProductVisible, isProductArchivedOrHidden, normalizeProductName, matchOfficialProduct, getCanonicalProductName } from './types';
 import { 
   safeGetLocalStorage, 
   safeSetLocalStorage, 
@@ -54,7 +54,6 @@ import {
   deleteProductFromFirestore,
   saveSaleAndDecrementStock,
   saveExpenseToFirestore,
-  saveCashMovementToFirestore,
   saveShiftToFirestore,
   saveShiftClosureToFirestore,
   saveReservationToFirestore,
@@ -417,7 +416,7 @@ function getDateMsSafe(value: any): number {
   }
 }
 
-function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses: Expense[], cashMovements: CashMovement[], rooms: Room[], products: Product[], reservations: Reservation[]) {
+function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses: Expense[], rooms: Room[], products: Product[], reservations: Reservation[]) {
   const activeShiftId = activeShift?.id;
   const validSales = (Array.isArray(sales) ? sales : []).filter((s: any) => s?.type !== 'stock_add' && s?.tipoMovimiento !== 'abastecimiento_inventario' && s?.tipoMovimiento !== 'creacion_producto' && s?.tipoMovimiento !== 'ajuste_inventario' && s?.anulada !== true);
   const validExpenses = Array.isArray(expenses) ? expenses : [];
@@ -429,12 +428,6 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
   const reportExpenses = activeShiftId
     ? validExpenses.filter(e => belongsToActiveShift(e, activeShiftId))
     : validExpenses.filter(e => isTodayColombiaFromAny((e as any).createdAt, (e as any).fecha));
-  const reportCashMovements = (Array.isArray(cashMovements) ? cashMovements : []).filter((m) =>
-    m.tipo === 'entrada_efectivo_no_venta' && (
-      activeShiftId ? m.shiftId === activeShiftId : isTodayColombiaFromAny(m.createdAt, m.fecha)
-    )
-  );
-  const entradasEfectivoNoVenta = reportCashMovements.reduce((sum, m) => sum + Number(m.monto || 0), 0);
 
   const ventasHabitaciones = reportSales.filter(s => s.tipoVenta === 'habitacion').reduce((sum, s) => sum + getMoneySafe(s.total), 0);
   const ventasProductos = reportSales.filter(s => s.tipoVenta === 'producto').reduce((sum, s) => sum + getMoneySafe(s.total), 0);
@@ -470,17 +463,15 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     gastosEfectivo,
     gastosTransferencia,
     totalGastos,
-    entradasEfectivoNoVenta,
-    cajaEsperada: entradasEfectivoNoVenta + efectivo - gastosEfectivo,
+    cajaEsperada: efectivo - gastosEfectivo,
     habitacionesOcupadas: ocupadas,
     habitacionesDisponibles: disponibles,
     productosStockBajo: stockBajo,
     productosAgotados: agotados,
     reservasHoy,
-    movimientos: [...reportSales, ...reportExpenses, ...reportCashMovements].length,
+    movimientos: [...reportSales, ...reportExpenses].length,
     ventasDetalle: reportSales,
-    gastosDetalle: reportExpenses,
-    efectivoNoVentaDetalle: reportCashMovements
+    gastosDetalle: reportExpenses
   };
 }
 
@@ -697,7 +688,6 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [cashMovements, setCashMovements] = useState<CashMovement[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [closures, setClosures] = useState<ShiftClosure[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -706,8 +696,8 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
 
   const dailyReport = useMemo(() => {
-    return computeKodiakReport(activeShift, sales, expenses, cashMovements, rooms, products, reservations);
-  }, [activeShift, sales, expenses, cashMovements, rooms, products, reservations]);
+    return computeKodiakReport(activeShift, sales, expenses, rooms, products, reservations);
+  }, [activeShift, sales, expenses, rooms, products, reservations]);
 
   const systemAlerts = useMemo(() => {
     return computeKodiakAlerts(activeShift, sales, expenses, rooms, products, reservations);
@@ -973,12 +963,6 @@ export default function App() {
       setExpenses(items);
     });
 
-    // Entradas de efectivo separadas de ventas y gastos; sincronizadas en vivo.
-    const unsubCashMovements = subscribeToCollection<CashMovement>('hotel_cash_movements', (items) => {
-      updateSyncTimestamp();
-      setCashMovements(Array.isArray(items) ? items : []);
-    });
-
     // Shifts Real-time Sync
     const unsubShifts = subscribeToCollection<Shift>('hotel_shifts', (items) => {
       updateSyncTimestamp();
@@ -1075,7 +1059,6 @@ export default function App() {
       unsubClients();
       unsubSales();
       unsubExpenses();
-      unsubCashMovements();
       unsubShifts();
       unsubClosures();
       unsubReservations();
@@ -1504,12 +1487,6 @@ export default function App() {
     }
   };
 
-  const handleAddCashMovement = async (movement: CashMovement) => {
-    await saveCashMovementToFirestore(movement);
-    // Reflejar inmediatamente el registro; la suscripción reemplaza datos al sincronizar.
-    setCashMovements((prev) => [movement, ...prev.filter((item) => item.id !== movement.id)]);
-  };
-
   const handleAddExpense = async (newExpense: Expense) => {
     setOnlineStatus('syncing');
 
@@ -1914,7 +1891,6 @@ export default function App() {
           products={products}
           sales={sales}
           expenses={expenses}
-          cashMovements={cashMovements}
           shifts={shifts}
           closures={closures}
           reservations={reservations}
@@ -2200,8 +2176,6 @@ export default function App() {
               activeShift={activeShift}
               sales={sales}
               expenses={expenses}
-              cashMovements={cashMovements}
-              onAddCashMovement={handleAddCashMovement}
               onAddExpense={handleAddExpense}
               userProfile={userProfile}
             />
@@ -2250,7 +2224,6 @@ export default function App() {
               activeShift={activeShift!}
               sales={sales}
               expenses={expenses}
-              cashMovements={cashMovements}
               products={products}
               onConfirmClosure={handleConfirmClosure}
               closureInProgress={closureInProgress}
