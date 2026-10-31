@@ -549,7 +549,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
               <div className="flex justify-between"><span>Pago retirado:</span><span className="text-red-400">-{formatCop(authorizedPayroll)}</span></div>
               <div className="flex justify-between font-bold text-emerald-400 border-t border-slate-800 pt-2"><span>Caja que debe quedar:</span><span>{formatCop(cashShouldRemain)}</span></div>
               <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-[11px] text-emerald-300 font-bold leading-relaxed">
-                El valor que escriba abajo será la <strong>base sugerida del siguiente turno</strong>. La empleada que recibe lo verá al abrir caja.
+                Registre aquí el <strong>dinero físico contado al cierre</strong> para conservar la conciliación. Ese dinero no se trasladará como base del próximo turno: <strong>la siguiente apertura comienza siempre en $0</strong>.
               </div>
               <div className="space-y-1.5 pt-2">
                 <label className="text-xs text-slate-300 font-bold flex items-center gap-1.5"><Coins className="h-3.5 w-3.5 text-emerald-400" />Dinero que deja físicamente en caja *</label>
