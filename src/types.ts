@@ -247,6 +247,22 @@ export interface Sale {
   updatedAt?: string;
 }
 
+// Efectivo recibido o identificado en caja que NO corresponde a una venta.
+// La base contable de todo turno sigue siendo $0.
+export interface CashMovement {
+  id: string;
+  shiftId: string;
+  tipo: 'entrada_efectivo_no_venta';
+  monto: number;
+  concepto: string;
+  observacion: string;
+  empleada: string;
+  fecha: string;
+  hora: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
 export interface Expense {
   id: string;
   shiftId: string;
