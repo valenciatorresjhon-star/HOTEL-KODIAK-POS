@@ -183,6 +183,7 @@ export interface Sale {
   valorTransferido?: number;
   referenciaTransferencia?: string;
   productoId?: string;
+  productoFirestoreId?: string;
   productoNombre?: string;
   cantidad?: number;
   habitacionId?: string;
