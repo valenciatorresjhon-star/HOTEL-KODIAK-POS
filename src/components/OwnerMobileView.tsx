@@ -1106,7 +1106,7 @@ export function OwnerMobileView({
 
     const totalGastos = expensesToday.reduce((acc, curr) => acc + getMoneyValue(curr.valor), 0);
     const gananciaNeta = ingresosTotales - totalGastos;
-    const baseInicialActiva = activeShift?.baseInicial === 668500 ? 0 : getMoneyValue(activeShift?.baseInicial);
+    const baseInicialActiva = 0; // Base contable del turno: siempre cero.
     const cajaFisicaEsperada = baseInicialActiva + ingresosEfectivo - gastosEfectivo;
 
     // Room stats
@@ -1574,7 +1574,7 @@ export function OwnerMobileView({
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Caja Base Inicial:</span>
-                    <span className="font-bold text-white font-mono">{formatCop(stats.activeShift.baseInicial === 668500 ? 0 : stats.activeShift.baseInicial)}</span>
+                    <span className="font-bold text-white font-mono">{formatCop(0)}</span>
                   </div>
                 </div>
               ) : (
