@@ -17,7 +17,7 @@ import {
   Bell
 } from 'lucide-react';
 
-import { Room, Client, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, INITIAL_ROOMS_DATA, INITIAL_PRODUCTS_DATA, getEmployeeProfile, getEmployeeFullName, isProductVisible, isProductArchivedOrHidden, normalizeProductName, matchOfficialProduct, getCanonicalProductName } from './types';
+import { Room, Client, Product, Sale, Expense, CashMovement, Shift, ShiftClosure, Reservation, FirebaseUser, INITIAL_ROOMS_DATA, INITIAL_PRODUCTS_DATA, getEmployeeProfile, getEmployeeFullName, isProductVisible, isProductArchivedOrHidden, normalizeProductName, matchOfficialProduct, getCanonicalProductName } from './types';
 import { 
   safeGetLocalStorage, 
   safeSetLocalStorage, 
@@ -54,6 +54,7 @@ import {
   deleteProductFromFirestore,
   saveSaleAndDecrementStock,
   saveExpenseToFirestore,
+  saveCashMovementToFirestore,
   saveShiftToFirestore,
   saveShiftClosureToFirestore,
   saveReservationToFirestore,
@@ -688,6 +689,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [cashMovements, setCashMovements] = useState<CashMovement[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [closures, setClosures] = useState<ShiftClosure[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -963,6 +965,12 @@ export default function App() {
       setExpenses(items);
     });
 
+    // Entradas de efectivo separadas de ventas y gastos; sincronizadas en vivo.
+    const unsubCashMovements = subscribeToCollection<CashMovement>('hotel_cash_movements', (items) => {
+      updateSyncTimestamp();
+      setCashMovements(Array.isArray(items) ? items : []);
+    });
+
     // Shifts Real-time Sync
     const unsubShifts = subscribeToCollection<Shift>('hotel_shifts', (items) => {
       updateSyncTimestamp();
@@ -1059,6 +1067,7 @@ export default function App() {
       unsubClients();
       unsubSales();
       unsubExpenses();
+      unsubCashMovements();
       unsubShifts();
       unsubClosures();
       unsubReservations();
@@ -1487,6 +1496,12 @@ export default function App() {
     }
   };
 
+  const handleAddCashMovement = async (movement: CashMovement) => {
+    await saveCashMovementToFirestore(movement);
+    // Reflejar inmediatamente el registro; la suscripción reemplaza datos al sincronizar.
+    setCashMovements((prev) => [movement, ...prev.filter((item) => item.id !== movement.id)]);
+  };
+
   const handleAddExpense = async (newExpense: Expense) => {
     setOnlineStatus('syncing');
 
@@ -1891,6 +1906,7 @@ export default function App() {
           products={products}
           sales={sales}
           expenses={expenses}
+          cashMovements={cashMovements}
           shifts={shifts}
           closures={closures}
           reservations={reservations}
@@ -2176,6 +2192,8 @@ export default function App() {
               activeShift={activeShift}
               sales={sales}
               expenses={expenses}
+              cashMovements={cashMovements}
+              onAddCashMovement={handleAddCashMovement}
               onAddExpense={handleAddExpense}
               userProfile={userProfile}
             />
@@ -2224,6 +2242,7 @@ export default function App() {
               activeShift={activeShift!}
               sales={sales}
               expenses={expenses}
+              cashMovements={cashMovements}
               products={products}
               onConfirmClosure={handleConfirmClosure}
               closureInProgress={closureInProgress}
