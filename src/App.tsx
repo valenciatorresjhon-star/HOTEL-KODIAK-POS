@@ -1335,6 +1335,12 @@ export default function App() {
       }
       setOnlineStatus('online');
 
+      if (productToDecrement) {
+        // ProductosView gestiona su comprobante y cajón una sola vez,
+        // después de confirmar que la venta y el stock quedaron guardados.
+        return;
+      }
+
       if (isInventoryStockMovement) {
         // Abastecer inventario solo guarda trazabilidad. No imprime, no abre cajón.
         return;
