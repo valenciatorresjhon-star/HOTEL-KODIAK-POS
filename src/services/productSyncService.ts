@@ -221,23 +221,27 @@ export function reconcileAndSyncKodiakProducts(
   for (const [canonicalName, entries] of groupedByCanonical.entries()) {
     processedCanonicalNames.add(canonicalName);
 
-    // Si hay duplicados, priorizamos primero un documento ACTIVO; luego el stock mayor;
-    // finalmente el más reciente. Esto evita escoger como ganador un duplicado archivado.
+    // Si hay duplicados, conservar el documento ACTIVO más reciente.
+    // Priorizar el stock más alto recuperaba unidades ya vendidas y hacía parecer
+    // que la venta no descontaba inventario.
     const sorted = [...entries].sort((a, b) => {
       const activeA = isProductArchivedOrHidden(a.item) ? 0 : 1;
       const activeB = isProductArchivedOrHidden(b.item) ? 0 : 1;
       if (activeA !== activeB) return activeB - activeA;
 
-      const stockA = Number.isFinite(Number(a.item.stock)) ? Number(a.item.stock) : 0;
-      const stockB = Number.isFinite(Number(b.item.stock)) ? Number(b.item.stock) : 0;
-      if (stockA !== stockB) return stockB - stockA;
+      const dateA = Math.max(
+        Date.parse(a.item.clientUpdatedAt || '') || 0,
+        Date.parse(a.item.updatedAt || '') || 0
+      );
+      const dateB = Math.max(
+        Date.parse(b.item.clientUpdatedAt || '') || 0,
+        Date.parse(b.item.updatedAt || '') || 0
+      );
+      if (dateA !== dateB) return dateB - dateA;
 
       if (a.rawName === canonicalName && b.rawName !== canonicalName) return -1;
       if (b.rawName === canonicalName && a.rawName !== canonicalName) return 1;
-
-      const msA = new Date(a.item.updatedAt || a.item.clientUpdatedAt || 0).getTime();
-      const msB = new Date(b.item.updatedAt || b.item.clientUpdatedAt || 0).getTime();
-      return msB - msA;
+      return 0;
     });
 
     const winnerEntry = sorted[0];
