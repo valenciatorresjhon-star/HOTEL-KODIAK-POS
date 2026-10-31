@@ -91,10 +91,12 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
   const [openingDrawer, setOpeningDrawer] = useState<boolean>(false);
 
   const suggestedBaseFromClosure = useMemo(() => getClosureSuggestedBase(lastClosure), [lastClosure?.id, lastClosure?.dineroDejadoEnCaja]);
-  const baseCash = parseMoneyInput(baseCashInput);
+  // Regla permanente: cada turno nuevo inicia con base contable $0.
+  // El efectivo del cierre anterior se conserva solo como dato histórico.
+  const baseCash = 0;
   const hasPreviousClosure = !!lastClosure;
-  const baseDifference = hasPreviousClosure ? baseCash - suggestedBaseFromClosure : 0;
-  const openingWithDifferentBase = hasPreviousClosure && baseCash !== suggestedBaseFromClosure;
+  const baseDifference = 0;
+  const openingWithDifferentBase = false;
 
   useEffect(() => {
     if (!lastClosure) {
@@ -126,19 +128,6 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       setError('Por favor ingrese su clave o PIN de turno.');
       return false;
     }
-    if (baseCash < 0 || Number.isNaN(baseCash)) {
-      setError('La base inicial de caja no puede ser negativa.');
-      return false;
-    }
-    if (hasPreviousClosure && !baseCashInput) {
-      setError('Debe confirmar con cuánto abre la caja según el cierre anterior.');
-      return false;
-    }
-    if (openingWithDifferentBase && obs.trim().length < 5) {
-      setError(`La base digitada no coincide con el cierre anterior (${moneyText(suggestedBaseFromClosure)}). Explique la diferencia en novedades.`);
-      return false;
-    }
-
     return true;
   };
 
@@ -170,9 +159,9 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
         cierreAnteriorHora: lastClosure?.horaCierre || '',
         cierreAnteriorCajaQueDebiaQuedar: Number(lastClosure?.cajaQueDebeQuedar || 0),
         cierreAnteriorDineroDejado: Number(lastClosure?.dineroDejadoEnCaja || 0),
-        baseSugeridaCierreAnterior: suggestedBaseFromClosure,
-        diferenciaBaseVsCierreAnterior: baseDifference,
-        aperturaConDiferencia: openingWithDifferentBase
+        baseSugeridaCierreAnterior: 0,
+        diferenciaBaseVsCierreAnterior: 0,
+        aperturaConDiferencia: false
       }, win);
       setInitialDrawerOpened(true);
       window.alert('Caja abierta para conteo inicial. Cuente la base y luego registre el turno.');
@@ -215,11 +204,11 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       cierreAnteriorHoraCierre: lastClosure?.horaCierre || undefined,
       cierreAnteriorCajaQueDebiaQuedar: lastClosure?.cajaQueDebeQuedar,
       cierreAnteriorDineroDejado: lastClosure?.dineroDejadoEnCaja,
-      baseSugeridaCierreAnterior: suggestedBaseFromClosure || undefined,
-      baseConfirmadaApertura: baseCash,
-      diferenciaBaseVsCierreAnterior: hasPreviousClosure ? baseDifference : 0,
-      aperturaConDiferencia: openingWithDifferentBase,
-      observacionDiferenciaBase: openingWithDifferentBase ? obs.trim() : undefined
+      baseSugeridaCierreAnterior: 0,
+      baseConfirmadaApertura: 0,
+      diferenciaBaseVsCierreAnterior: 0,
+      aperturaConDiferencia: false,
+      observacionDiferenciaBase: undefined
     };
 
     onOpenShift(newShift);
@@ -266,7 +255,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
               </div>
             </div>
             <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-3 text-[11px] text-slate-300 leading-relaxed">
-              Esta cifra debe ser la <strong>base inicial del nuevo turno</strong>. Si al contar la caja encuentra otro valor, escriba la diferencia en novedades antes de abrir.
+              Este valor corresponde al cierre anterior y se conserva para consulta. <strong>La nueva base del turno siempre es $0.</strong> Si el dinero permanece físicamente en caja, registre su entrega o retiro por separado.
             </div>
           </div>
         )}
@@ -274,7 +263,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
         {!hasPreviousClosure && (
           <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] text-amber-200 flex gap-2 leading-relaxed">
             <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>No encontré un cierre anterior con dinero dejado en caja. Registre la base inicial manualmente.</span>
+            <span>La apertura comienza con base $0. No se recuperan saldos de turnos anteriores.</span>
           </div>
         )}
 
@@ -372,24 +361,13 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
               type="text"
               inputMode="numeric"
               value={baseCashInput}
-              onChange={(e) => {
-                setBaseCashInput(formatMoneyInput(e.target.value));
-                setInitialDrawerOpened(false);
-              }}
-              placeholder="0"
-              className={`w-full rounded-xl bg-slate-950 border px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:ring-1 ${openingWithDifferentBase ? 'border-amber-500 focus:border-amber-400 focus:ring-amber-500/30' : 'border-slate-800 focus:border-emerald-500 focus:ring-emerald-500/30'}`}
+              readOnly
+              aria-label="Base inicial fija en cero"
+              className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2 text-sm text-white font-mono cursor-not-allowed"
             />
-            {hasPreviousClosure ? (
-              <span className="text-[10px] text-emerald-400 block">Último cierre (solo referencia): {moneyText(suggestedBaseFromClosure)}. Base predeterminada: $0.</span>
-            ) : (
-              <span className="text-[10px] text-slate-500 block">Base predeterminada: $0. Ajústela si el conteo físico indica otro valor.</span>
-            )}
-            {openingWithDifferentBase && (
-              <div className={`text-[10px] font-bold rounded-lg p-2 ${baseDifference >= 0 ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>
-                {baseDifference >= 0 ? 'Sobrante frente al cierre anterior: ' : 'Faltante frente al cierre anterior: '}
-                {moneyText(Math.abs(baseDifference))}. Explique la diferencia en novedades.
-              </div>
-            )}
+            <span className="text-[10px] text-emerald-400 block">
+              Base fija: $0. {hasPreviousClosure ? `Último cierre (solo consulta): ${moneyText(suggestedBaseFromClosure)}.` : 'Sin cierre anterior.'}
+            </span>
           </div>
 
           {/* Observaciones */}
@@ -401,7 +379,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
             <textarea
               value={obs}
               onChange={(e) => setObs(e.target.value)}
-              placeholder={openingWithDifferentBase ? 'Obligatorio: explique por qué abre con una base distinta al último cierre.' : 'Opcional. Escriba si hay faltantes, novedades, etc.'}
+              placeholder="Opcional. Registre novedades o retiros del efectivo que quedó del turno anterior."
               rows={2}
               className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-none"
             />
@@ -420,7 +398,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
           {initialDrawerOpened && (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 p-3 text-[11px] font-bold flex gap-2">
               <CheckCircle className="h-4 w-4 flex-shrink-0" />
-              <span>Caja abierta. Si cambia la base inicial, debe volver a abrir/imprimir comprobante de conteo.</span>
+              <span>Caja abierta. La base del nuevo turno es $0; los movimientos se contarán desde cero.</span>
             </div>
           )}
 
