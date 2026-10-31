@@ -417,7 +417,7 @@ function getDateMsSafe(value: any): number {
   }
 }
 
-function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses: Expense[], rooms: Room[], products: Product[], reservations: Reservation[]) {
+function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses: Expense[], cashMovements: CashMovement[], rooms: Room[], products: Product[], reservations: Reservation[]) {
   const activeShiftId = activeShift?.id;
   const validSales = (Array.isArray(sales) ? sales : []).filter((s: any) => s?.type !== 'stock_add' && s?.tipoMovimiento !== 'abastecimiento_inventario' && s?.tipoMovimiento !== 'creacion_producto' && s?.tipoMovimiento !== 'ajuste_inventario' && s?.anulada !== true);
   const validExpenses = Array.isArray(expenses) ? expenses : [];
@@ -429,6 +429,12 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
   const reportExpenses = activeShiftId
     ? validExpenses.filter(e => belongsToActiveShift(e, activeShiftId))
     : validExpenses.filter(e => isTodayColombiaFromAny((e as any).createdAt, (e as any).fecha));
+  const reportCashMovements = (Array.isArray(cashMovements) ? cashMovements : []).filter((m) =>
+    m.tipo === 'entrada_efectivo_no_venta' && (
+      activeShiftId ? m.shiftId === activeShiftId : isTodayColombiaFromAny(m.createdAt, m.fecha)
+    )
+  );
+  const entradasEfectivoNoVenta = reportCashMovements.reduce((sum, m) => sum + Number(m.monto || 0), 0);
 
   const ventasHabitaciones = reportSales.filter(s => s.tipoVenta === 'habitacion').reduce((sum, s) => sum + getMoneySafe(s.total), 0);
   const ventasProductos = reportSales.filter(s => s.tipoVenta === 'producto').reduce((sum, s) => sum + getMoneySafe(s.total), 0);
@@ -464,15 +470,17 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     gastosEfectivo,
     gastosTransferencia,
     totalGastos,
-    cajaEsperada: efectivo - gastosEfectivo,
+    entradasEfectivoNoVenta,
+    cajaEsperada: entradasEfectivoNoVenta + efectivo - gastosEfectivo,
     habitacionesOcupadas: ocupadas,
     habitacionesDisponibles: disponibles,
     productosStockBajo: stockBajo,
     productosAgotados: agotados,
     reservasHoy,
-    movimientos: [...reportSales, ...reportExpenses].length,
+    movimientos: [...reportSales, ...reportExpenses, ...reportCashMovements].length,
     ventasDetalle: reportSales,
-    gastosDetalle: reportExpenses
+    gastosDetalle: reportExpenses,
+    efectivoNoVentaDetalle: reportCashMovements
   };
 }
 
@@ -698,8 +706,8 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
 
   const dailyReport = useMemo(() => {
-    return computeKodiakReport(activeShift, sales, expenses, rooms, products, reservations);
-  }, [activeShift, sales, expenses, rooms, products, reservations]);
+    return computeKodiakReport(activeShift, sales, expenses, cashMovements, rooms, products, reservations);
+  }, [activeShift, sales, expenses, cashMovements, rooms, products, reservations]);
 
   const systemAlerts = useMemo(() => {
     return computeKodiakAlerts(activeShift, sales, expenses, rooms, products, reservations);
