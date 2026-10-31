@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Coins, Plus, TrendingUp, TrendingDown, ClipboardList, Wallet, FileText, Check, X, Unlock } from 'lucide-react';
-import { Shift, Sale, Expense, PaymentMethod } from '../types';
+import { Shift, Sale, Expense, CashMovement, PaymentMethod } from '../types';
 import { formatCop, isInvalidValue } from '../utils/storage';
 import { openCashDrawer, getSettings, openBrowserPrintWindow, setBrowserPrintWindow } from '../services/printerService';
 import { saveCashDrawerLog } from '../services/firebaseService';
@@ -29,6 +29,8 @@ interface CajaProps {
   activeShift: Shift;
   sales: Sale[];
   expenses: Expense[];
+  cashMovements: CashMovement[];
+  onAddCashMovement: (movement: CashMovement) => Promise<void>;
   onAddExpense: (expense: Expense) => void;
   userProfile?: any;
 }
@@ -37,6 +39,8 @@ export const CajaView: React.FC<CajaProps> = ({
   activeShift,
   sales,
   expenses,
+  cashMovements,
+  onAddCashMovement,
   onAddExpense,
   userProfile
 }) => {
@@ -62,7 +66,11 @@ export const CajaView: React.FC<CajaProps> = ({
   // Base operativa siempre 0, incluso si un turno viejo traía un valor heredado.
   // No reescribir aquí el registro histórico de Firestore.
   const baseInicial = 0;
-  const expectedCashInBox = totalSalesCash - totalExpensesCash;
+  const cashEntries = (Array.isArray(cashMovements) ? cashMovements : []).filter((movement) =>
+    movement.shiftId === activeShift.id && movement.tipo === 'entrada_efectivo_no_venta'
+  );
+  const totalCashEntries = cashEntries.reduce((sum, movement) => sum + Number(movement.monto || 0), 0);
+  const expectedCashInBox = totalCashEntries + totalSalesCash - totalExpensesCash;
 
   // New Expense form states
   const [showExpenseModal, setShowExpenseModal] = useState<boolean>(false);
@@ -73,6 +81,56 @@ export const CajaView: React.FC<CajaProps> = ({
   const [observacion, setObservacion] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
+  const [showCashEntryModal, setShowCashEntryModal] = useState<boolean>(false);
+  const [cashEntryAmount, setCashEntryAmount] = useState<number>(0);
+  const [cashEntryReason, setCashEntryReason] = useState<string>('');
+  const [cashEntrySaving, setCashEntrySaving] = useState<boolean>(false);
+  const [cashEntryError, setCashEntryError] = useState<string>('');
+
+  const handleRegisterCashEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCashEntryError('');
+    if (!Number.isSafeInteger(cashEntryAmount) || cashEntryAmount <= 0) {
+      setCashEntryError('Digite la cantidad real de efectivo que entró o ya estaba disponible.');
+      return;
+    }
+    if (cashEntryReason.trim().length < 8) {
+      setCashEntryError('Explique el origen de ese efectivo para evitar duplicidades.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `¿Confirma que hay ${formatCop(cashEntryAmount)} en efectivo no registrado como venta?\n\nEste ingreso aumenta la caja disponible, pero NO las ventas. No registre dinero de ventas que ya aparecen en el POS.`
+    );
+    if (!confirmed) return;
+
+    const now = new Date();
+    const movement: CashMovement = {
+      id: `cash-in-${now.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
+      shiftId: activeShift.id,
+      tipo: 'entrada_efectivo_no_venta',
+      monto: cashEntryAmount,
+      concepto: 'EFECTIVO DISPONIBLE NO PROVENIENTE DE VENTAS',
+      observacion: cashEntryReason.trim(),
+      empleada: activeShift.empleada,
+      fecha: now.toLocaleDateString('es-CO'),
+      hora: now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: now.toISOString(),
+      createdBy: userProfile?.uid || userProfile?.id || ''
+    };
+
+    setCashEntrySaving(true);
+    try {
+      await onAddCashMovement(movement);
+      setShowCashEntryModal(false);
+      setCashEntryAmount(0);
+      setCashEntryReason('');
+      setSuccessMsg('Efectivo disponible registrado como movimiento de caja, no como venta.');
+    } catch (err: any) {
+      setCashEntryError(err?.message || 'No fue posible registrar el efectivo disponible.');
+    } finally {
+      setCashEntrySaving(false);
+    }
+  };
 
   const handleManualOpenDrawer = async () => {
     // Only visible/executable for admin and recepcionista
@@ -206,9 +264,20 @@ export const CajaView: React.FC<CajaProps> = ({
 
           <button
             onClick={() => {
+              setCashEntryError('');
+              setShowCashEntryModal(true);
+            }}
+            className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-[0.98] transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Registrar efectivo existente</span>
+          </button>
+
+          <button
+            onClick={() => {
               setErrorMsg('');
               setShowExpenseModal(true);
-            }}
+            }
             className="py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-[0.98] transition-all"
           >
             <Plus className="h-4 w-4" />
@@ -236,9 +305,9 @@ export const CajaView: React.FC<CajaProps> = ({
           </div>
           <div>
             <p className={`text-xl font-black ${expectedCashInBox < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{formatCop(expectedCashInBox)}</p>
-            <p className="text-[9px] text-slate-500 font-medium">Base inicial ($0) + ventas en efectivo - egresos en efectivo</p>
+            <p className="text-[9px] text-slate-500 font-medium">Base ($0) + efectivo existente registrado ({formatCop(totalCashEntries)}) + ventas en efectivo - gastos en efectivo</p>
             {expectedCashInBox < 0 && (
-              <p className="text-[9px] text-red-300">Saldo negativo: falta registrar el ingreso o justificar de dónde salió el efectivo usado para el gasto.</p>
+              <p className="text-[9px] text-red-300">Saldo negativo: compruebe si falta registrar una venta o efectivo existente. No lo registre dos veces.</p>
             )}
           </div>
         </div>
@@ -291,6 +360,26 @@ export const CajaView: React.FC<CajaProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* Entradas auditables de efectivo existente, separadas de ingresos por ventas */}
+      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-bold text-indigo-200">Efectivo existente registrado (no ventas)</span>
+          <span className="text-sm font-bold text-indigo-200">{formatCop(totalCashEntries)}</span>
+        </div>
+        {cashEntries.length ? (
+          <div className="mt-2 space-y-1">
+            {cashEntries.map((movement) => (
+              <div key={movement.id} className="text-[11px] text-slate-300 flex flex-wrap justify-between gap-2">
+                <span>{movement.hora} · {movement.observacion}</span>
+                <strong className="text-indigo-200">+{formatCop(movement.monto)}</strong>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1 text-[11px] text-slate-400">No hay entradas adicionales registradas. El dinero previo debe anotarse con su origen para incluirlo en la caja esperada.</p>
+        )}
       </div>
 
       {/* Two panels layout for Sales Log and Expense Log */}
@@ -365,6 +454,43 @@ export const CajaView: React.FC<CajaProps> = ({
         </div>
 
       </div>
+
+      {/* Modal: Efectivo existente sin clasificarlo como venta */}
+      {showCashEntryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <form onSubmit={handleRegisterCashEntry} className="bg-slate-900 border border-indigo-500/30 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-white">REGISTRAR EFECTIVO EXISTENTE</h3>
+              <button type="button" onClick={() => setShowCashEntryModal(false)} disabled={cashEntrySaving} className="text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-300">Se suma a la caja física del turno. No constituye una venta ni modifica la base inicial de $0.</p>
+            <label className="block text-xs text-slate-300 font-semibold">Efectivo disponible sin registrar (COP)</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatMoneyInput(cashEntryAmount)}
+              onChange={(e) => setCashEntryAmount(parseMoneyInput(e.target.value))}
+              placeholder="Ej. 60.000"
+              className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white font-mono"
+            />
+            <label className="block text-xs text-slate-300 font-semibold">Origen del dinero (obligatorio)</label>
+            <textarea
+              value={cashEntryReason}
+              onChange={(e) => setCashEntryReason(e.target.value)}
+              placeholder="Ej. Efectivo contado en caja antes de pagar gastos, no asociado a ventas del turno"
+              rows={3}
+              className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-xs text-white"
+            />
+            <p className="text-[11px] text-amber-300">Revise que el efectivo no corresponda a ventas ya registradas. El sistema conservará este movimiento para auditoría.</p>
+            {cashEntryError && <p className="text-xs text-red-300">{cashEntryError}</p>}
+            <button type="submit" disabled={cashEntrySaving} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-xl text-xs font-bold text-white">
+              {cashEntrySaving ? 'REGISTRANDO...' : 'CONFIRMAR ENTRADA DE EFECTIVO'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Modal: Register expense */}
       {showExpenseModal && (
