@@ -599,25 +599,9 @@ function getClosureDateMsForOpening(closure: any): number {
   );
 }
 
-function getClosureNextShiftBase(closure: any): number {
-  // Un cero explícito en el cierre es válido. No recuperar saldos esperados
-  // de caja ni valores de cierres antiguos como base de un nuevo turno.
-  const candidates = [
-    closure?.baseParaSiguienteTurno,
-    closure?.baseSugeridaSiguienteTurno,
-    closure?.nextShiftBase,
-    closure?.dineroDejadoEnCaja,
-    closure?.dineroFisicoContado
-  ];
-
-  for (const value of candidates) {
-    if (value === undefined || value === null || value === '') continue;
-    const n = Number(value);
-    if (Number.isFinite(n) && n >= 0) {
-      return n === 668500 ? 0 : n;
-    }
-  }
-
+function getClosureNextShiftBase(_closure: any): number {
+  // Política del hotel: cada turno comienza desde $0, independientemente
+  // del dinero que figure en cierres anteriores. Nunca modificar ese historial.
   return 0;
 }
 
@@ -628,7 +612,7 @@ function normalizeClosureForNextOpening(closure: ShiftClosure): ShiftClosure {
     baseParaSiguienteTurno: baseForNextShift,
     baseSugeridaSiguienteTurno: baseForNextShift,
     nextShiftBase: baseForNextShift,
-    cierreDejaCajaParaProximoTurno: true
+    cierreDejaCajaParaProximoTurno: false
   } as ShiftClosure;
 }
 
@@ -1045,8 +1029,7 @@ export default function App() {
       const latestClosure = getLatestClosureForOpening(sortedClosures);
       if (latestClosure) {
         safeSetLocalStorage('hotel_last_shift_closure', latestClosure);
-        const nextBase = getClosureNextShiftBase(latestClosure);
-        safeSetLocalStorage('hotel_next_shift_base', nextBase === 668500 ? 0 : nextBase);
+        safeSetLocalStorage('hotel_next_shift_base', 0);
       }
     });
 
@@ -1083,21 +1066,9 @@ export default function App() {
     };
   }, [userProfile]);
 
-  // Limpieza inicial de saldos legados en caché local
+  // Limpiar únicamente la sugerencia de apertura, sin alterar datos de cierres.
   useEffect(() => {
-    const cachedNextBase = safeGetLocalStorage<any>('hotel_next_shift_base', 0);
-    if (Number(cachedNextBase) === 668500) {
-      safeSetLocalStorage('hotel_next_shift_base', 0);
-    }
-    const cachedLastClosure = safeGetLocalStorage<any>('hotel_last_shift_closure', null);
-    if (cachedLastClosure && (cachedLastClosure.baseParaSiguienteTurno === 668500 || cachedLastClosure.cajaQueDebeQuedar === 668500 || cachedLastClosure.dineroDejadoEnCaja === 668500)) {
-      safeSetLocalStorage('hotel_last_shift_closure', {
-        ...cachedLastClosure,
-        baseParaSiguienteTurno: 0,
-        cajaQueDebeQuedar: 0,
-        dineroDejadoEnCaja: 0
-      });
-    }
+    safeSetLocalStorage('hotel_next_shift_base', 0);
   }, []);
 
   // Global guards for closure in progress
@@ -1182,8 +1153,17 @@ export default function App() {
   // Update handlers pushing directly to Firebase
   const handleOpenShift = async (newShift: Shift) => {
     setOnlineStatus('syncing');
-    await saveShiftToFirestore(newShift);
-    setActiveShift(newShift);
+    // Segunda protección en el guardado: ninguna apertura nueva hereda efectivo.
+    // No se modifican turnos existentes ni cierres históricos.
+    const shiftWithZeroBase: Shift = {
+      ...newShift,
+      baseInicial: 0,
+      baseConfirmadaApertura: 0,
+      diferenciaBaseVsCierreAnterior: 0,
+      aperturaConDiferencia: false
+    };
+    await saveShiftToFirestore(shiftWithZeroBase);
+    setActiveShift(shiftWithZeroBase);
     setActiveTab('inicio');
     setOnlineStatus('online');
   };
@@ -1528,15 +1508,15 @@ export default function App() {
     setOnlineStatus('syncing');
     setClosureInProgress(true);
 
-    // El dinero dejado al cierre queda como base sugerida para el siguiente turno.
-    const baseForNextShift = getClosureNextShiftBase(closure);
-    (closure as any).baseParaSiguienteTurno = baseForNextShift;
-    (closure as any).baseSugeridaSiguienteTurno = baseForNextShift;
-    (closure as any).nextShiftBase = baseForNextShift;
-    (closure as any).cierreDejaCajaParaProximoTurno = true;
+    // Conservar el efectivo declarado en el cierre como dato histórico.
+    // El turno siguiente NO recibe ese monto como base contable.
+    (closure as any).baseParaSiguienteTurno = 0;
+    (closure as any).baseSugeridaSiguienteTurno = 0;
+    (closure as any).nextShiftBase = 0;
+    (closure as any).cierreDejaCajaParaProximoTurno = false;
 
     safeSetLocalStorage('hotel_last_shift_closure', closure);
-    safeSetLocalStorage('hotel_next_shift_base', baseForNextShift);
+    safeSetLocalStorage('hotel_next_shift_base', 0);
     setClosures((prev) => [normalizeClosureForNextOpening(closure), ...prev.filter((item) => item.id !== closure.id)]);
 
     try {
