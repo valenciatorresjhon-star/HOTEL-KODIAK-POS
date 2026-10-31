@@ -1293,7 +1293,9 @@ export default function App() {
     }
 
     const isInventoryStockMovement =
-      newSale.type === 'stock_add' ||
+      newSale.metodoPago === 'N/A' ||
+      (newSale.type || '').startsWith('stock_') ||
+      (newSale.tipoVenta === 'producto' && Number(newSale.total || 0) <= 0) ||
       newSale.tipoMovimiento === 'abastecimiento_inventario' ||
       newSale.tipoMovimiento === 'entrada_inventario' ||
       (newSale as any).inventoryMovementType === 'entrada' ||
