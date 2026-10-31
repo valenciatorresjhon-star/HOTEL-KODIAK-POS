@@ -40,7 +40,14 @@ export const CajaView: React.FC<CajaProps> = ({
   onAddExpense,
   userProfile
 }) => {
-  const currentShiftSales = (Array.isArray(sales) ? sales : []).filter((s) => s.shiftId === activeShift.id);
+  // No contar movimientos de abastecimiento o auditoría como ventas.
+  const currentShiftSales = (Array.isArray(sales) ? sales : []).filter((s: any) =>
+    s.shiftId === activeShift.id &&
+    s.type !== 'stock_add' &&
+    s.tipoVenta !== 'inventario' &&
+    s.metodoPago !== 'N/A' &&
+    Number(s.total || 0) > 0
+  );
   const currentShiftExpenses = (Array.isArray(expenses) ? expenses : []).filter((e) => e.shiftId === activeShift.id);
 
   // Totals calculations
@@ -52,8 +59,10 @@ export const CajaView: React.FC<CajaProps> = ({
   const totalExpensesTransfer = currentShiftExpenses.filter((e) => (e.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, e) => sum + e.valor, 0);
   const totalExpenses = totalExpensesCash + totalExpensesTransfer;
 
-  const baseInicial = activeShift?.baseInicial === 668500 ? 0 : Number(activeShift?.baseInicial || 0);
-  const expectedCashInBox = baseInicial + totalSalesCash - totalExpensesCash;
+  // Base operativa siempre 0, incluso si un turno viejo traía un valor heredado.
+  // No reescribir aquí el registro histórico de Firestore.
+  const baseInicial = 0;
+  const expectedCashInBox = totalSalesCash - totalExpensesCash;
 
   // New Expense form states
   const [showExpenseModal, setShowExpenseModal] = useState<boolean>(false);
@@ -226,8 +235,11 @@ export const CajaView: React.FC<CajaProps> = ({
             </div>
           </div>
           <div>
-            <p className="text-xl font-black text-emerald-400">{formatCop(expectedCashInBox)}</p>
-            <p className="text-[9px] text-slate-500 font-medium">Base inicial ({formatCop(baseInicial)}) + ventas en efectivo - egresos en efectivo</p>
+            <p className={`text-xl font-black ${expectedCashInBox < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{formatCop(expectedCashInBox)}</p>
+            <p className="text-[9px] text-slate-500 font-medium">Base inicial ($0) + ventas en efectivo - egresos en efectivo</p>
+            {expectedCashInBox < 0 && (
+              <p className="text-[9px] text-red-300">Saldo negativo: falta registrar el ingreso o justificar de dónde salió el efectivo usado para el gasto.</p>
+            )}
           </div>
         </div>
 
