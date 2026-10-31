@@ -73,7 +73,7 @@ interface ProductosProps {
   products: Product[];
   sales?: Sale[];
   onUpdateProducts: (updated: Product[]) => void | Promise<void>;
-  onAddSale: (sale: Sale) => void;
+  onAddSale: (sale: Sale) => void | Promise<void>;
   userProfile?: FirebaseUser | null;
   hotelSettings?: any;
 }
@@ -137,6 +137,7 @@ export const ProductosView: React.FC<ProductosProps> = ({
 
   // Form states
   const [sellCantidad, setSellCantidad] = useState<number>(1);
+  const [sellSaving, setSellSaving] = useState<boolean>(false);
   const [sellMetodoPago, setSellMetodoPago] = useState<PaymentMethod>('Efectivo');
   const [sellEfectivoRecibido, setSellEfectivoRecibido] = useState<number>(0);
   const [sellTransferValue, setSellTransferValue] = useState<number>(0);
@@ -405,7 +406,8 @@ export const ProductosView: React.FC<ProductosProps> = ({
   };
 
   // Handle direct sell
-  const handleConfirmSell = () => {
+  const handleConfirmSell = async () => {
+    if (sellSaving) return;
     setErrorMsg('');
     if (!sellProduct) return;
 
@@ -455,24 +457,8 @@ export const ProductosView: React.FC<ProductosProps> = ({
 
     const now = new Date();
 
-    // 1. Descontar stock
-    const updatedProducts = safeProducts.map((p) => {
-      if (p.id === sellProduct.id) {
-        const remainingStock = p.stock - sellCantidad;
-        let pStatus: 'Disponible' | 'Bajo stock' | 'Agotado' = 'Disponible';
-        if (remainingStock <= 0) pStatus = 'Agotado';
-        else if (remainingStock <= p.stockMinimo) pStatus = 'Bajo stock';
-
-        return {
-          ...p,
-          stock: remainingStock,
-          estado: pStatus,
-          updatedAt: now.toISOString()
-        };
-      }
-      return p;
-    });
-    onUpdateProducts(updatedProducts);
+    // La venta y el descuento de stock se confirman juntos en App/Firebase.
+    // No actualizamos el inventario local antes del guardado remoto.
 
     // 2. Registrar en hotel_sales
     const newSale: Sale = {
@@ -491,10 +477,22 @@ export const ProductosView: React.FC<ProductosProps> = ({
       valorTransferido: sellMetodoPago === 'Transferencia' ? sellTransferValue : undefined,
       referenciaTransferencia: sellMetodoPago === 'Transferencia' ? sellRef : undefined,
       productoId: sellProduct.id,
+      productoFirestoreId: String((sellProduct as any).firestoreId || (sellProduct as any).documentId || (sellProduct as any).docId || sellProduct.id),
       productoNombre: sellProduct.nombre,
       cantidad: sellCantidad
     };
-    onAddSale(newSale);
+    setSellSaving(true);
+    try {
+      await Promise.resolve(onAddSale(newSale));
+    } catch (error: any) {
+      // Se conserva la pantalla para reintentar: no se descuenta stock ni se
+      // muestra recibo o mensaje de éxito cuando Firestore rechaza la venta.
+      console.error('[ProductosView] Venta sin registrar:', error);
+      setErrorMsg(error?.message || 'No se pudo registrar la venta. Intente de nuevo.');
+      return;
+    } finally {
+      setSellSaving(false);
+    }
 
     // 3. Si es efectivo, abrir caja registradora de forma independiente.
     // En transferencia NO se abre cajón.
@@ -1109,9 +1107,10 @@ export const ProductosView: React.FC<ProductosProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmSell}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors"
+                disabled={sellSaving}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-wait text-white rounded-xl text-xs font-bold transition-colors"
               >
-                REGISTRAR VENTA DIRECTA
+                {sellSaving ? 'GUARDANDO VENTA E INVENTARIO...' : 'REGISTRAR VENTA DIRECTA'}
               </button>
             </div>
           </div>
