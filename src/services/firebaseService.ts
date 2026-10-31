@@ -8,7 +8,8 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc,
-  writeBatch, 
+  writeBatch,
+  runTransaction,
   onSnapshot, 
   serverTimestamp, 
   query, 
@@ -1310,6 +1311,60 @@ export const saveSaleAndDecrementStock = async (sale: Sale, productToDecrement?:
     createdAt: sale.createdAt || nowIso,
     updatedAt: (sale as any).updatedAt || nowIso
   } as any;
+
+  // Venta de producto: registrar venta y descontar existencias EN UNA TRANSACCIÓN.
+  // No informar éxito ni descontar stock local si Firestore no confirma ambas.
+  // Evita duplicar el descuento si se reintenta exactamente el mismo ID de venta.
+  if (productToDecrement) {
+    const productId = String(productToDecrement.id || '').trim();
+    const qty = Number(productToDecrement.qty);
+    if (!productId || !Number.isInteger(qty) || qty <= 0) {
+      throw new Error('No se pudo identificar el producto o la cantidad de la venta.');
+    }
+    if (!isFirebaseConfigured || typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error('Para vender productos se requiere conexión a Firebase. No se registró ni descontó inventario.');
+    }
+
+    const saleRef = doc(db, 'hotel_sales', saleId);
+    const productRef = doc(db, 'hotel_products', productId);
+    const stockFinal = await runTransaction(db, async (transaction) => {
+      const previousSale = await transaction.get(saleRef);
+      const productSnapshot = await transaction.get(productRef);
+      if (!productSnapshot.exists()) {
+        throw new Error('El producto no existe en Firebase. Actualice el inventario antes de vender.');
+      }
+
+      const product = productSnapshot.data() as Product;
+      const stockActual = Number(product.stock || 0);
+      if (previousSale.exists()) return stockActual; // Venta ya aplicada: no descontar dos veces.
+      if (!Number.isFinite(stockActual) || stockActual < qty) {
+        throw new Error(`Inventario insuficiente. Quedan ${stockActual} unidades disponibles.`);
+      }
+
+      const nuevoStock = stockActual - qty;
+      const estado = nuevoStock === 0 ? 'Agotado' :
+        nuevoStock <= Number(product.stockMinimo || 0) ? 'Bajo stock' : 'Disponible';
+
+      transaction.set(saleRef, sanitizeForFirestore({
+        ...saleData,
+        syncPending: false,
+        sincronizacionPendiente: false,
+        syncedAt: nowIso
+      }), { merge: true });
+      transaction.update(productRef, {
+        stock: nuevoStock,
+        estado,
+        updatedAt: nowIso,
+        clientUpdatedAt: nowIso
+      });
+      return nuevoStock;
+    });
+
+    upsertLocalDocument('hotel_sales', saleId, saleData, false);
+    notifyLocalListeners('hotel_sales');
+    removePendingSync('hotel_sales', saleId);
+    return stockFinal;
+  }
 
   // 1. Guardar venta local inmediata.
   upsertLocalDocument('hotel_sales', saleId, saleData, false);
