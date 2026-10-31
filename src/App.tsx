@@ -1299,15 +1299,38 @@ export default function App() {
       (newSale as any).inventoryMovementType === 'entrada' ||
       (newSale as any).motivoInventario;
 
-    // Los movimientos de inventario son auditoría/Kardex, NO son ventas reales.
-    // Por eso jamás deben descontar stock, imprimir recibo ni abrir cajón.
-    // En venta de productos, ProductosView ya descuenta el inventario y guarda en Firestore vía onUpdateProducts.
-    const productToDecrement = undefined;
+    // Una venta de productos debe guardar simultáneamente el ingreso
+    // y el descuento de inventario en Firestore. Las entradas de stock
+    // son solo Kardex y no descuentan existencias.
+    const productId = String(
+      (newSale as any).productoFirestoreId || newSale.productoId || ''
+    ).trim();
+    const productToDecrement =
+      !isInventoryStockMovement && newSale.tipoVenta === 'producto'
+        ? { id: productId, qty: Number(newSale.cantidad || 0) }
+        : undefined;
 
     const initialPrintWindow = getBrowserPrintWindow();
 
     try {
-      await saveSaleAndDecrementStock(newSale, productToDecrement);
+      const stockFinal = await saveSaleAndDecrementStock(newSale, productToDecrement);
+
+      if (productToDecrement) {
+        // Actualización inmediata en pantalla después de confirmar la transacción.
+        setSales((prev) => [newSale, ...prev.filter((sale) => sale.id !== newSale.id)]);
+        if (typeof stockFinal === 'number') {
+          setProducts((prev) => prev.map((product: any) => {
+            const id = String(product.firestoreId || product.documentId || product.docId || product.id);
+            if (id !== productId && String(product.id) !== productId) return product;
+            return {
+              ...product,
+              stock: stockFinal,
+              estado: stockFinal === 0 ? 'Agotado' :
+                stockFinal <= Number(product.stockMinimo || 0) ? 'Bajo stock' : 'Disponible'
+            };
+          }));
+        }
+      }
       setOnlineStatus('online');
 
       if (isInventoryStockMovement) {
@@ -1443,6 +1466,9 @@ export default function App() {
           console.error("Fallo impresión recibo de venta:", err);
         }
       }
+    } catch (error) {
+      setOnlineStatus('online');
+      throw error;
     } finally {
       // Clean up pre-opened window if not consumed by printReceipt
       const currentPrintWindow = getBrowserPrintWindow();
