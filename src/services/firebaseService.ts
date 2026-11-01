@@ -1047,11 +1047,11 @@ export const subscribeToCollection = <T>(
     const remoteItems: any[] = [];
     snapshot.forEach((docSnap) => {
       remoteItems.push({ 
-        id: docSnap.id, 
-        firestoreId: docSnap.id, 
-        documentId: docSnap.id, 
-        docId: docSnap.id, 
-        ...docSnap.data() 
+        ...docSnap.data(),
+        id: docSnap.id,
+        firestoreId: docSnap.id,
+        documentId: docSnap.id,
+        docId: docSnap.id 
       });
     });
 

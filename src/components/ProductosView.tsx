@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Package, Plus, ShoppingCart, ShieldAlert, ArrowDown, ListFilter, Trash2, Edit3, CheckCircle, RefreshCw, X, Printer, FileText, Zap, Sparkles, AlertCircle } from 'lucide-react';
-import { Product, Sale, Shift, PaymentMethod, FirebaseUser, getEmployeeFullName, OFFICIAL_KODIAK_PRODUCTS, isProductVisible, isProductArchivedOrHidden } from '../types';
+import { Product, Sale, Shift, PaymentMethod, FirebaseUser, getEmployeeFullName, OFFICIAL_KODIAK_PRODUCTS, getCanonicalProductName, matchOfficialProduct, isProductVisible, isProductArchivedOrHidden } from '../types';
 import { formatCop, isInvalidValue } from '../utils/storage';
 import { AdminPasswordModal } from './AdminPasswordModal';
 import { auth } from '../firebase';
@@ -314,8 +314,16 @@ export const ProductosView: React.FC<ProductosProps> = ({
     if (editStock <= 0) status = 'Agotado';
     else if (editStock <= editStockMinimo) status = 'Bajo stock';
 
-    const cleanNombre = editNombre.trim().toUpperCase();
-    const finalNombre = (cleanNombre === 'SPINAX' || cleanNombre.includes('SPINAX')) ? 'SPEEDMAX' : cleanNombre;
+    const finalNombre = getCanonicalProductName(editNombre);
+    if (!matchOfficialProduct(finalNombre)) {
+      setErrorMsg('Este nombre no figura entre los 27 productos del inventario.');
+      return;
+    }
+    if (safeProducts.some((p) => p.id !== editingProduct.id &&
+      getCanonicalProductName(p.nombre) === finalNombre && !isProductArchivedOrHidden(p))) {
+      setErrorMsg('Ya existe un producto con ese nombre o alias.');
+      return;
+    }
 
     const updated = safeProducts.map((p) => {
       if (p.id === editingProduct.id) {
@@ -636,9 +644,17 @@ export const ProductosView: React.FC<ProductosProps> = ({
       return;
     }
 
-    const existing = safeProducts.find((p) => p.nombre.toLowerCase() === newNombre.trim().toLowerCase());
-    if (existing && !isProductArchivedOrHidden(existing)) {
-      setErrorMsg('Ya existe un producto activo con este nombre en el inventario.');
+    const nameCanonical = getCanonicalProductName(newNombre);
+    const target = matchOfficialProduct(nameCanonical);
+    if (!target) {
+      setErrorMsg('El catálogo solo admite los 27 productos del inventario del 31/10/2026.');
+      return;
+    }
+    const existing = safeProducts.find((p) =>
+      getCanonicalProductName(p.nombre) === nameCanonical && !isProductArchivedOrHidden(p)
+    );
+    if (existing) {
+      setErrorMsg('Este producto ya está registrado, incluso si escribió otro alias.');
       return;
     }
 
@@ -653,8 +669,8 @@ export const ProductosView: React.FC<ProductosProps> = ({
     else if (newStock <= newStockMinimo) status = 'Bajo stock';
 
     const newProd: Product = {
-      id: `prod-${now.getTime()}`,
-      nombre: newNombre.trim().toUpperCase(),
+      id: target.id,
+      nombre: target.nombre,
       categoria: newCategoria,
       precio: newPrecio,
       stock: newStock,

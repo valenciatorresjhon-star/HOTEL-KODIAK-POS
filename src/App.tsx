@@ -17,7 +17,7 @@ import {
   Bell
 } from 'lucide-react';
 
-import { Room, Client, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, INITIAL_ROOMS_DATA, INITIAL_PRODUCTS_DATA, getEmployeeProfile, getEmployeeFullName, isProductVisible, isProductArchivedOrHidden, normalizeProductName, matchOfficialProduct, getCanonicalProductName } from './types';
+import { Room, Client, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, INITIAL_ROOMS_DATA, INITIAL_PRODUCTS_DATA, OFFICIAL_ACTIVE_PRODUCT_NAMES, getEmployeeProfile, getEmployeeFullName, isProductVisible, isProductArchivedOrHidden, normalizeProductName, matchOfficialProduct, getCanonicalProductName } from './types';
 import { 
   safeGetLocalStorage, 
   safeSetLocalStorage, 
@@ -206,25 +206,31 @@ function forceArchiveProductForKodiak(product: any): Product {
 }
 
 function normalizeProductsForKodiak(productList: Product[]): Product[] {
-  const rawList = Array.isArray(productList) ? productList : [];
-  const processed: Product[] = [];
-  const seenCanonical = new Set<string>();
-
-  for (const rawP of rawList) {
-    if (!rawP) continue;
-    let p: Product = { ...rawP };
-    const rawName = String(p.nombre || '').trim();
-    const canonical = getCanonicalProductName(rawName);
-    p.nombre = canonical;
-
-    if (seenCanonical.has(canonical)) {
+  const list = Array.isArray(productList) ? productList : [];
+  const selected = new Map<string, Product>();
+  for (const raw of list) {
+    if (!raw) continue;
+    const canonical = getCanonicalProductName(raw.nombre);
+    if (!OFFICIAL_ACTIVE_PRODUCT_NAMES.includes(canonical as any)) continue;
+    const item = { ...raw, nombre: canonical };
+    const previous = selected.get(canonical);
+    if (!previous) {
+      selected.set(canonical, item);
       continue;
     }
-    seenCanonical.add(canonical);
-    processed.push(forceArchiveProductForKodiak(p));
+    // Preferir documentos activos; luego el movimiento más reciente.
+    const prevActive = isProductVisible(previous);
+    const nowActive = isProductVisible(item);
+    const prevMs = Date.parse(String((previous as any).clientUpdatedAt || previous.updatedAt || 0)) || 0;
+    const nowMs = Date.parse(String((item as any).clientUpdatedAt || item.updatedAt || 0)) || 0;
+    if ((nowActive && !prevActive) || (nowActive === prevActive && nowMs > prevMs)) {
+      selected.set(canonical, item);
+    }
   }
-
-  return processed;
+  return OFFICIAL_ACTIVE_PRODUCT_NAMES
+    .map((name) => selected.get(name))
+    .filter((item): item is Product => !!item)
+    .map(forceArchiveProductForKodiak);
 }
 
 function getVisibleProductsForKodiak(productList: Product[]): Product[] {
@@ -1251,17 +1257,18 @@ export default function App() {
     safeSetLocalStorage('hotel_products', safeArr);
 
     try {
-      await Promise.all(
-        safeArr.map(async (p) => {
-          await saveProductToFirestore({
-            ...p,
-            updatedAt: (p as any).updatedAt || new Date().toISOString(),
-            clientUpdatedAt: new Date().toISOString()
-          } as any);
-        })
-      );
+      // Evitar reescribir el stock de los otros 26 productos con una copia
+      // anterior cuando se edita o abastece solamente uno.
+      const changed = safeArr.filter((p) => {
+        const original = products.find((old) => old.id === p.id);
+        if (!original) return true;
+        return ['nombre','precio','stock','stockMinimo','categoria','activo','archivado','oculto']
+          .some((key) => (p as any)[key] !== (original as any)[key]);
+      });
+      await Promise.all(changed.map((p) => saveProductToFirestore(p)));
     } catch (err) {
       console.error("[handleUpdateProducts] Error al guardar productos:", err);
+      throw err;
     } finally {
       setOnlineStatus('online');
     }
