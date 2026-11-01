@@ -139,5 +139,14 @@
       "id": "prod-agua-saborizada"
     }
   ],
-  "nota": "Referencia histórica: no sobrescribir stock ni precio actuales de Firestore si existe un producto."
+  "nota": "Referencia histórica: no sobrescribir stock ni precio actuales de Firestore si existe un producto.",
+  "observacionesHoja": [
+    "Sin ventas",
+    "Alicia: sin novedad"
+  ],
+  "criterioCantidades": [
+    "GALLETAS FESTIVAL: 7 - 1 = 6",
+    "TRIDENT: 4 - 1 = 3",
+    "COCA-COLA: 19 - 3 = 16"
+  ]
 }
