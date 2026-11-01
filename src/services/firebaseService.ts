@@ -1065,7 +1065,7 @@ export const subscribeToCollection = <T>(
       // Reconciliamos nombres canónicos, consolidamos duplicados y garantizamos catálogo dinámico.
       const { consolidated, actionsToRun } = reconcileAndSyncKodiakProducts(
         remoteItems,
-        saveProductToFirestore,
+        saveProductCatalogMetadataToFirestore,
         deleteProductFromFirestore
       );
       saveLocalCollection('hotel_products', consolidated);
@@ -1174,6 +1174,36 @@ export const saveClientToFirestore = async (client: Client) => {
 };
 
 // Save/Update Products
+// La normalización del catálogo solo puede modificar nombre/visibilidad.
+ // No sobrescribir stock ni precio con una lectura anterior de onSnapshot.
+const saveProductCatalogMetadataToFirestore = async (product: Product): Promise<void> => {
+  const item: any = product;
+  const id = String(item.firestoreId || item.documentId || item.docId || item.id || '').trim();
+  if (!id) throw new Error('Producto sin identificador de Firebase.');
+
+  // Producto ausente, creado a partir del inventario físico: documento completo.
+  if (item.inventoryReferenceDate === '2026-10-31' && !item.firestoreId && !item.documentId && !item.docId) {
+    await saveProductToFirestore(product);
+    return;
+  }
+
+  if (!isFirebaseConfigured) return;
+  const patch: Record<string, any> = {
+    nombre: product.nombre,
+    activo: item.activo !== false,
+    archivado: item.archivado === true,
+    oculto: item.oculto === true,
+    visible: item.visible !== false,
+    eliminado: item.eliminado === true,
+    deleted: item.deleted === true,
+    isDeleted: item.isDeleted === true,
+    estado: item.estado,
+    status: item.status
+  };
+  if (item.motivoDesactivacion) patch.motivoDesactivacion = item.motivoDesactivacion;
+  await updateDoc(doc(db, 'hotel_products', id), sanitizeForFirestore(patch));
+};
+
 export const saveProductToFirestore = async (product: Product) => {
   let toSave = { ...product } as Product & { firestoreId?: string; documentId?: string; docId?: string };
   const rawName = String(toSave.nombre || '').trim();
