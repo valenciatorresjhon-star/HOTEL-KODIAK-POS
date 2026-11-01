@@ -1,0 +1,143 @@
+{
+  "fecha": "2026-10-31",
+  "fuente": "conteo físico manuscrito entregado por el usuario",
+  "unidades": 253,
+  "referencias": [
+    {
+      "nombre": "PAPAS RIZADAS",
+      "unidades": 4,
+      "id": "prod-papas"
+    },
+    {
+      "nombre": "GALLETAS FESTIVAL",
+      "unidades": 6,
+      "id": "prod-galletas-festival"
+    },
+    {
+      "nombre": "GALLETAS WAFER",
+      "unidades": 9,
+      "id": "prod-galletas-wafer"
+    },
+    {
+      "nombre": "DORITOS",
+      "unidades": 4,
+      "id": "prod-doritos"
+    },
+    {
+      "nombre": "DE TODITOS",
+      "unidades": 5,
+      "id": "prod-de-toditos"
+    },
+    {
+      "nombre": "TRIDENT",
+      "unidades": 3,
+      "id": "prod-trident"
+    },
+    {
+      "nombre": "GALLETAS MINICHIP",
+      "unidades": 9,
+      "id": "prod-galletas-minichip"
+    },
+    {
+      "nombre": "CHAMPÚ",
+      "unidades": 1,
+      "id": "prod-champu"
+    },
+    {
+      "nombre": "CREMA PARA PEINAR",
+      "unidades": 10,
+      "id": "prod-crema-peinar"
+    },
+    {
+      "nombre": "DESODORANTE",
+      "unidades": 5,
+      "id": "prod-desodorante"
+    },
+    {
+      "nombre": "CIGARRILLO UNIDAD",
+      "unidades": 49,
+      "id": "prod-cigarrillo-unidad"
+    },
+    {
+      "nombre": "CIGARRILLO PAQUETE",
+      "unidades": 5,
+      "id": "prod-cigarrillo-paquete"
+    },
+    {
+      "nombre": "CREMA DENTAL",
+      "unidades": 2,
+      "id": "prod-crema-dental"
+    },
+    {
+      "nombre": "PRESTOBARBA",
+      "unidades": 9,
+      "id": "prod-prestobarba"
+    },
+    {
+      "nombre": "CONDONES",
+      "unidades": 13,
+      "id": "prod-condones"
+    },
+    {
+      "nombre": "SPEEDMAX",
+      "unidades": 5,
+      "id": "prod-speedmax"
+    },
+    {
+      "nombre": "JUGO DEL VALLE",
+      "unidades": 4,
+      "id": "prod-jugo-del-valle"
+    },
+    {
+      "nombre": "COCA-COLA",
+      "unidades": 16,
+      "id": "prod-coca-cola"
+    },
+    {
+      "nombre": "AGUA NATURAL",
+      "unidades": 15,
+      "id": "prod-agua-natural"
+    },
+    {
+      "nombre": "AGUA CON GAS",
+      "unidades": 13,
+      "id": "prod-agua-con-gas"
+    },
+    {
+      "nombre": "POWER",
+      "unidades": 5,
+      "id": "prod-power"
+    },
+    {
+      "nombre": "QUATRO",
+      "unidades": 7,
+      "id": "prod-quatro"
+    },
+    {
+      "nombre": "CERVEZA",
+      "unidades": 33,
+      "id": "prod-cerveza"
+    },
+    {
+      "nombre": "JUGO HIT",
+      "unidades": 9,
+      "id": "prod-jugo-hit"
+    },
+    {
+      "nombre": "GATORADE",
+      "unidades": 12,
+      "id": "prod-gatorade"
+    },
+    {
+      "nombre": "REFAJO",
+      "unidades": 0,
+      "id": "prod-refajo"
+    },
+    {
+      "nombre": "AGUA SABORIZADA",
+      "unidades": 0,
+      "id": "prod-agua-saborizada"
+    }
+  ],
+  "nota": "Referencia histórica: no sobrescribir stock ni precio actuales de Firestore si existe un producto."
+}

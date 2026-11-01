@@ -1,5 +1,6 @@
 import {
   Product,
+  OFFICIAL_KODIAK_PRODUCTS,
   getCanonicalProductName,
   isProductArchivedOrHidden
 } from '../types';
@@ -21,115 +22,15 @@ export interface ProductReconciliationResult {
 export const PRODUCT_INVENTORY_SYNC_VERSION = 4;
 export const PRODUCT_CATALOG_RECOVERY_VERSION = 4;
 
-export const TARGET_INVENTORY_PRODUCTS: Array<{
-  nombre: string;
-  categoria: string;
-  precio: number;
-  stock: number;
-  stockMinimo: number;
-  preferredId: string;
-  aliases: string[];
-}> = [
-  {
-    nombre: 'JUGO DEL VALLE',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 9,
-    stockMinimo: 3,
-    preferredId: 'prod-jugo-del-valle',
-    aliases: ['JUGO DEL VALLE PET 400', 'JUGOS DEL VALLE', 'DEL VALLE', 'VALLE']
-  },
-  {
-    nombre: 'REFAJO',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 11,
-    stockMinimo: 2,
-    preferredId: 'prod-refajo',
-    aliases: ['REFAJO PET 400', 'CERVEZA REFAJO', 'REFAJO COLOMBIANA']
-  },
-  {
-    nombre: 'POWER',
-    categoria: 'Bebidas',
-    precio: 5000,
-    stock: 14,
-    stockMinimo: 2,
-    preferredId: 'prod-power',
-    aliases: ['POWER PET 400 ML', 'POWER PET 400', 'POWERADE']
-  },
-  {
-    nombre: 'COCA-COLA',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 12,
-    stockMinimo: 3,
-    preferredId: 'prod-coca-cola',
-    aliases: ['COCA COLA', 'COCACOLA', 'COCA-COLA PET 400']
-  },
-  {
-    nombre: 'JUGO HIT',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 9,
-    stockMinimo: 3,
-    preferredId: 'prod-jugo-hit',
-    aliases: ['HIT', 'JUGOS HIT', 'JUGO HIT PET']
-  },
-  {
-    nombre: 'QUATRO',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 12,
-    stockMinimo: 3,
-    preferredId: 'prod-quatro',
-    aliases: ['QUATRO PET 400', 'CUATRO', 'CUATRO PET 400']
-  },
-  {
-    nombre: 'AGUA NATURAL',
-    categoria: 'Bebidas',
-    precio: 3000,
-    stock: 22,
-    stockMinimo: 2,
-    preferredId: 'prod-agua-natural',
-    aliases: ['AGUA', 'AGUAS', 'AGUA NATURAL', 'AGUA SIN GAS', 'AGUA PURIFICADA']
-  },
-  {
-    nombre: 'SPEEDMAX',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 12,
-    stockMinimo: 3,
-    preferredId: 'prod-speedmax',
-    aliases: ['SPINAX', 'SPINMAX', 'SPEED MAX', 'SPEED']
-  },
-  {
-    nombre: 'DORITOS',
-    categoria: 'Snacks',
-    precio: 4000,
-    stock: 5,
-    stockMinimo: 3,
-    preferredId: 'prod-doritos',
-    aliases: ['DORITO', 'DORITOS MEGA']
-  },
-  {
-    nombre: 'PAPAS RIZADAS',
-    categoria: 'Snacks',
-    precio: 4000,
-    stock: 10,
-    stockMinimo: 3,
-    preferredId: 'prod-papas',
-    aliases: ['PAPAS', 'PAPAS MARGARITA', 'PAPITAS', 'PAPAS FRITAS']
-  },
-  {
-    nombre: 'GALLETAS FESTIVAL',
-    categoria: 'Snacks',
-    precio: 2000,
-    stock: 11,
-    stockMinimo: 3,
-    preferredId: 'prod-galletas-festival',
-    aliases: ['FESTIVAL', 'GALLETA FESTIVAL']
-  }
-];
+export const TARGET_INVENTORY_PRODUCTS = OFFICIAL_KODIAK_PRODUCTS.map((product) => ({
+  nombre: product.nombre,
+  categoria: product.categoria,
+  precio: product.precioSugerido,
+  stock: product.stock,
+  stockMinimo: product.stockMinimo,
+  preferredId: product.id,
+  aliases: product.aliases
+}));
 
 const TARGET_MAP = new Map(TARGET_INVENTORY_PRODUCTS.map((p) => [p.nombre, p]));
 
@@ -250,56 +151,11 @@ export function reconcileAndSyncKodiakProducts(
     let needsSave = winnerEntry.rawName !== canonicalName;
 
     const targetDef = TARGET_MAP.get(canonicalName);
-    const alreadyUpdated = hasAppliedInventoryUpdate(winnerDoc);
-
-    if (targetDef && !alreadyUpdated) {
-      // Actualización de inventario oficial del Hotel Kodiak (se ejecuta UNA SOLA VEZ por producto).
-      const now = new Date().toISOString();
-      winnerDoc = {
-        ...winnerDoc,
-        nombre: targetDef.nombre,
-        categoria: targetDef.categoria,
-        precio: targetDef.precio,
-        stock: targetDef.stock,
-        stockMinimo: targetDef.stockMinimo,
-        estado: 'Disponible',
-        activo: true,
-        archivado: false,
-        oculto: false,
-        visible: true,
-        eliminado: false,
-        deleted: false,
-        isDeleted: false,
-        status: 'active',
-        inventoryUpdateVersion: PRODUCT_INVENTORY_SYNC_VERSION,
-        catalogRecoveryVersion: PRODUCT_CATALOG_RECOVERY_VERSION,
-        recoveredFromLegacyCatalog: true,
-        updatedAt: now,
-        clientUpdatedAt: now
-      } as Product;
+    // Conservar siempre precio y stock de Firebase: la foto es un inventario
+    // fechado, no una autorización para sobrescribir ventas posteriores.
+    if (targetDef && winnerDoc.nombre !== targetDef.nombre) {
+      winnerDoc = { ...winnerDoc, nombre: targetDef.nombre };
       needsSave = true;
-    } else {
-      // Operación normal o producto ya actualizado previamente:
-      // NUNCA restablecemos el stock ni precio. Si hubo ventas o cambios, se conservan.
-      const normalizedActive: Product = {
-        ...winnerDoc,
-        nombre: canonicalName,
-        activo: true,
-        archivado: false,
-        oculto: false,
-        visible: true,
-        eliminado: false,
-        deleted: false,
-        isDeleted: false,
-        status: 'active'
-      } as Product;
-
-      if (!hasAppliedInventoryUpdate(normalizedActive) && targetDef) {
-        (normalizedActive as any).inventoryUpdateVersion = PRODUCT_INVENTORY_SYNC_VERSION;
-        needsSave = true;
-      }
-
-      winnerDoc = normalizedActive;
     }
 
     consolidated.push(winnerDoc);
@@ -316,20 +172,11 @@ export function reconcileAndSyncKodiakProducts(
       });
     }
 
-    // Borrar únicamente duplicados reales después de haber elegido un ganador.
-    for (const dup of duplicates) {
-      const dupId = dup.item.firestoreId || dup.item.documentId || dup.item.docId || dup.item.id;
-      const winnerId = (winnerDoc as any).firestoreId || (winnerDoc as any).documentId || (winnerDoc as any).docId || (winnerDoc as any).id;
-      if (dupId && dupId !== winnerId) {
-        actionsToRun.push(async () => {
-          try {
-            await deleteDocFn(dupId);
-            console.log(`[reconcileProducts] Duplicado eliminado: ${dup.rawName} (${dupId})`);
-          } catch (err) {
-            console.warn(`[reconcileProducts] Error eliminando duplicado ${dupId}:`, err);
-          }
-        });
-      }
+    // Los duplicados permanecen en Firebase para conciliación manual.
+    // No borrar documentos con historial de ventas, ni restablecer su stock.
+    if (duplicates.length) {
+      console.warn('[Inventario Kodiak] Posibles duplicados para revisar:', canonicalName,
+        duplicates.map((entry) => entry.item.id));
     }
   }
 

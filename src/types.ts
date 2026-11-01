@@ -405,20 +405,6 @@ export const INITIAL_ROOMS_DATA = [
   'Hab 102'
 ];
 
-export const OFFICIAL_ACTIVE_PRODUCT_NAMES = [
-  "PAPAS",
-  "DORITOS",
-  "SPEEDMAX",
-  "GALLETAS FESTIVAL",
-  "JUGO HIT",
-  "QUATRO",
-  "REFAJO",
-  "JUGO DEL VALLE",
-  "AGUA NATURAL",
-  "COCA-COLA",
-  "POWER"
-] as const;
-
 export interface OfficialProductDefinition {
   key: string;
   id: string;
@@ -431,117 +417,37 @@ export interface OfficialProductDefinition {
 }
 
 export const OFFICIAL_KODIAK_PRODUCTS: OfficialProductDefinition[] = [
-  {
-    key: 'jugo_del_valle',
-    id: 'prod-jugo-del-valle',
-    nombre: 'JUGO DEL VALLE',
-    stock: 9,
-    stockMinimo: 3,
-    categoria: 'Bebidas',
-    precioSugerido: 4000,
-    aliases: ['JUGOS DEL VALLE', 'JUGO DEL VALLE', 'JUGO EL VALLE PET 400', 'JUGOS DEL VALLE PET 400', 'DEL VALLE', 'JUGO VALLE', 'JUGOS VALLE', 'VALLE']
-  },
-  {
-    key: 'refajo',
-    id: 'prod-refajo',
-    nombre: 'REFAJO',
-    stock: 11,
-    stockMinimo: 2,
-    categoria: 'Bebidas',
-    precioSugerido: 4000,
-    aliases: ['REFAJO', 'REFAJO PET 400', 'CERVEZA REFAJO', 'REFAJO COLOMBIANA', 'REFAJO 400ML']
-  },
-  {
-    key: 'power',
-    id: 'prod-power',
-    nombre: 'POWER',
-    stock: 14,
-    stockMinimo: 2,
-    categoria: 'Bebidas',
-    precioSugerido: 5000,
-    aliases: ['POWER', 'POWERADE', 'POWER ADE', 'BEBIDA POWER', 'POWERADE 500ML', 'POWER PET 400', 'POWER PET 400 ML']
-  },
-  {
-    key: 'coca_cola',
-    id: 'prod-coca-cola',
-    nombre: 'COCA-COLA',
-    stock: 12,
-    stockMinimo: 3,
-    categoria: 'Bebidas',
-    precioSugerido: 4000,
-    aliases: ['COCA COLA', 'COCACOLA', 'COCA-COLA PET 400', 'COCA-COLA', 'COKE', 'COCA-COLA 400ML', 'GASEOSA COCA COLA']
-  },
-  {
-    key: 'jugo_hit',
-    id: 'prod-jugo-hit',
-    nombre: 'JUGO HIT',
-    stock: 9,
-    stockMinimo: 3,
-    categoria: 'Bebidas',
-    precioSugerido: 4000,
-    aliases: ['JUGO HIT', 'HIT', 'JUGOS HIT', 'HIT PET']
-  },
-  {
-    key: 'quatro',
-    id: 'prod-quatro',
-    nombre: 'QUATRO',
-    stock: 12,
-    stockMinimo: 3,
-    categoria: 'Bebidas',
-    precioSugerido: 4000,
-    aliases: ['QUATRO', 'CUATRO', 'QUATRO PET 400', 'CUATRO PET 400', 'QUATRO 400ML', 'GASEOSA QUATRO']
-  },
-  {
-    key: 'agua_natural',
-    id: 'prod-agua-natural',
-    nombre: 'AGUA NATURAL',
-    stock: 22,
-    stockMinimo: 2,
-    categoria: 'Bebidas',
-    precioSugerido: 3000,
-    aliases: ['AGUA', 'AGUAS', 'AGUA NATURAL', 'AGUA SIN GAS', 'AGUA PURA', 'BOTELLA DE AGUA', 'AGUA MINERAL', 'AGUA PET 400']
-  },
-  {
-    key: 'speedmax',
-    id: 'prod-speedmax',
-    nombre: 'SPEEDMAX',
-    stock: 12,
-    stockMinimo: 3,
-    categoria: 'Bebidas',
-    precioSugerido: 4000,
-    aliases: ['SPEEDMAX', 'SPEED MAX', 'SPINAX', 'SPINMAX', 'SPEED', 'BEBIDA SPEEDMAX', 'ENERGIZANTE SPEEDMAX']
-  },
-  {
-    key: 'doritos',
-    id: 'prod-doritos',
-    nombre: 'DORITOS',
-    stock: 5,
-    stockMinimo: 3,
-    categoria: 'Snacks',
-    precioSugerido: 4000,
-    aliases: ['DORITOS', 'DORITO', 'DORITOS MEGA']
-  },
-  {
-    key: 'papas_rizadas',
-    id: 'prod-papas',
-    nombre: 'PAPAS RIZADAS',
-    stock: 10,
-    stockMinimo: 3,
-    categoria: 'Snacks',
-    precioSugerido: 4000,
-    aliases: ['PAPAS', 'PAPAS RIZADAS', 'PAPAS MARGARITA', 'PAPITAS', 'PAPAS FRITAS']
-  },
-  {
-    key: 'galletas_festival',
-    id: 'prod-galletas-festival',
-    nombre: 'GALLETAS FESTIVAL',
-    stock: 11,
-    stockMinimo: 3,
-    categoria: 'Snacks',
-    precioSugerido: 2000,
-    aliases: ['GALLETAS FESTIVAL', 'FESTIVAL', 'GALLETA FESTIVAL']
-  }
+  { key: "papas", id: "prod-papas", nombre: "PAPAS RIZADAS", stock: 4, stockMinimo: 3, categoria: "Snacks", precioSugerido: 4000, aliases: ["PAPAS RIZADAS","PAPAS","PAPA RIZADA","PAPAS MARGARITA"] },
+  { key: "galletas_festival", id: "prod-galletas-festival", nombre: "GALLETAS FESTIVAL", stock: 6, stockMinimo: 3, categoria: "Snacks", precioSugerido: 2000, aliases: ["FESTIVAL","GALLETA FESTIVAL","GALLETAS FESTIVAL"] },
+  { key: "galletas_wafer", id: "prod-galletas-wafer", nombre: "GALLETAS WAFER", stock: 9, stockMinimo: 0, categoria: "Snacks", precioSugerido: 0, aliases: ["GALLETA WAFER","GALLETAS WAFER","WAFER"] },
+  { key: "doritos", id: "prod-doritos", nombre: "DORITOS", stock: 4, stockMinimo: 3, categoria: "Snacks", precioSugerido: 4000, aliases: ["DORITO","DORITOS"] },
+  { key: "de_toditos", id: "prod-de-toditos", nombre: "DE TODITOS", stock: 5, stockMinimo: 0, categoria: "Snacks", precioSugerido: 0, aliases: ["DE TODITOS","DETODITOS"] },
+  { key: "trident", id: "prod-trident", nombre: "TRIDENT", stock: 3, stockMinimo: 0, categoria: "Snacks", precioSugerido: 0, aliases: ["TRIDENT","CHICLE TRIDENT"] },
+  { key: "galletas_minichip", id: "prod-galletas-minichip", nombre: "GALLETAS MINICHIP", stock: 9, stockMinimo: 0, categoria: "Snacks", precioSugerido: 0, aliases: ["GALLETAS MINICHIP","GALLETA MINICHIP","MINICHIPS","GALLETAS MINI CHIP"] },
+  { key: "champu", id: "prod-champu", nombre: "CHAMPÚ", stock: 1, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CHAMPU","SHAMPOO","SHAMPO","CHAMPÚ"] },
+  { key: "crema_peinar", id: "prod-crema-peinar", nombre: "CREMA PARA PEINAR", stock: 10, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CREMA PEINAR","CREMA PARA PEINAR"] },
+  { key: "desodorante", id: "prod-desodorante", nombre: "DESODORANTE", stock: 5, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["DESODORANTE","DESODORANTES"] },
+  { key: "cigarrillo_unidad", id: "prod-cigarrillo-unidad", nombre: "CIGARRILLO UNIDAD", stock: 49, stockMinimo: 0, categoria: "Otros", precioSugerido: 0, aliases: ["CIGARRILLO UNIDAD","CIGARRILLO UNI","CIGARRILLO SUELTO","CIGARRILLOS UNIDAD"] },
+  { key: "cigarrillo_paquete", id: "prod-cigarrillo-paquete", nombre: "CIGARRILLO PAQUETE", stock: 5, stockMinimo: 0, categoria: "Otros", precioSugerido: 0, aliases: ["CIGARRILLO PAQUETE","CIGARRILLO PAQ","CIGARRILLO PQT","CAJETILLA CIGARRILLOS","PAQUETE CIGARRILLOS"] },
+  { key: "crema_dental", id: "prod-crema-dental", nombre: "CREMA DENTAL", stock: 2, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CREMA DENTAL","PASTA DENTAL"] },
+  { key: "prestobarba", id: "prod-prestobarba", nombre: "PRESTOBARBA", stock: 9, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["PRESTOBARBA","PRESTO BARBA","MAQUINA DE AFEITAR"] },
+  { key: "condones", id: "prod-condones", nombre: "CONDONES", stock: 13, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CONDONES","PRESERVATIVOS","CONDON"] },
+  { key: "speedmax", id: "prod-speedmax", nombre: "SPEEDMAX", stock: 5, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["SPEEDMAX","SPEED MAX","SPINAX","SPINMAX","SPEED"] },
+  { key: "jugo_del_valle", id: "prod-jugo-del-valle", nombre: "JUGO DEL VALLE", stock: 4, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["JUGO DEL VALLE","JUGOS DEL VALLE","JUGO DEL VALLE PET 400","DEL VALLE","JUGO VALLE"] },
+  { key: "coca_cola", id: "prod-coca-cola", nombre: "COCA-COLA", stock: 16, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["COCA-COLA","COCA COLA","COCACOLA","COKE","COCA COLA PET 400"] },
+  { key: "agua_natural", id: "prod-agua-natural", nombre: "AGUA NATURAL", stock: 15, stockMinimo: 2, categoria: "Bebidas", precioSugerido: 3000, aliases: ["AGUA","AGUAS","AGUA NATURAL","AGUA SIN GAS","AGUA PURIFICADA","BOTELLA DE AGUA"] },
+  { key: "agua_con_gas", id: "prod-agua-con-gas", nombre: "AGUA CON GAS", stock: 13, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 0, aliases: ["AGUA CON GAS","AGUA GASIFICADA","AGUA GAS"] },
+  { key: "power", id: "prod-power", nombre: "POWER", stock: 5, stockMinimo: 2, categoria: "Bebidas", precioSugerido: 5000, aliases: ["POWER","POWER PET 400","POWER PET 400 ML","POWERADE","POWER ADE"] },
+  { key: "quatro", id: "prod-quatro", nombre: "QUATRO", stock: 7, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["QUATRO","CUATRO","QUATRO PET 400","CUATRO PET 400"] },
+  { key: "cerveza", id: "prod-cerveza", nombre: "CERVEZA", stock: 33, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 0, aliases: ["CERVEZA","CERVEZAS"] },
+  { key: "jugo_hit", id: "prod-jugo-hit", nombre: "JUGO HIT", stock: 9, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["JUGO HIT","HIT","JUGOS HIT","HIT PET"] },
+  { key: "gatorade", id: "prod-gatorade", nombre: "GATORADE", stock: 12, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 0, aliases: ["GATORADE","GATORADE PET"] },
+  { key: "refajo", id: "prod-refajo", nombre: "REFAJO", stock: 0, stockMinimo: 2, categoria: "Bebidas", precioSugerido: 4000, aliases: ["REFAJO","REFAJO PET 400","REFAJO COLOMBIANA"] },
+  { key: "agua_saborizada", id: "prod-agua-saborizada", nombre: "AGUA SABORIZADA", stock: 0, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 0, aliases: ["AGUA SABORIZADA","AGUA DE SABORES","AGUA SABORISADA"] }
 ];
+
+/** Inventario físico de referencia: 31-10-2026; no sobreescribir movimientos posteriores. */
+export const OFFICIAL_ACTIVE_PRODUCT_NAMES = OFFICIAL_KODIAK_PRODUCTS.map((product) => product.nombre);
 
 export function normalizeProductName(name: any): string {
   return String(name || '')
@@ -552,308 +458,46 @@ export function normalizeProductName(name: any): string {
     .replace(/\s+/g, ' '); // collapse multiple spaces
 }
 
+/** Normalización por alias exacto: evita mezclar AGUA SABORIZADA/NATURAL,
+ * AGUA CON GAS, REFAJO/CERVEZA, y CIGARRILLOS UNIDAD/PAQUETE. */
 export function getCanonicalProductName(rawName: any): string {
-  const norm = normalizeProductName(rawName);
-  if (!norm) return String(rawName || '').trim();
-
-  if (norm === 'SPINAX' || norm === 'SPINMAX' || norm === 'SPEED MAX' || norm === 'SPEEDMAX' || norm.includes('SPINAX')) {
-    return 'SPEEDMAX';
+  const norm = normalizeProductName(rawName).replace(/[.,_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!norm) return '';
+  for (const product of OFFICIAL_KODIAK_PRODUCTS) {
+    if ([product.nombre, ...product.aliases].some((name) =>
+      normalizeProductName(name).replace(/[.,_-]+/g, ' ').replace(/\s+/g, ' ').trim() === norm
+    )) return product.nombre;
   }
-  if (norm === 'AGUAS' || norm === 'AGUA NATURAL' || norm === 'AGUA PURIFICADA' || norm === 'AGUA' || (norm.includes('AGUA') && !norm.includes('GAS'))) {
-    return 'AGUA NATURAL';
-  }
-  if (norm === 'COCACOLA' || norm === 'COCA COLA' || norm === 'COCA-COLA') {
-    return 'COCA-COLA';
-  }
-  if (norm === 'QUATRO' || norm === 'QUATRO PET 400' || norm === 'CUATRO' || norm === 'CUATRO PET 400' || norm.startsWith('QUATRO')) {
-    return 'QUATRO';
-  }
-  if (norm === 'JUGO DEL VALLE' || norm === 'JUGO DEL VALLE PET 400' || norm === 'DEL VALLE' || norm === 'DEL VALLE PET 400' || norm.startsWith('JUGO DEL VALLE')) {
-    return 'JUGO DEL VALLE';
-  }
-  if (norm === 'POWER' || norm === 'POWER PET 400 ML' || norm === 'POWER PET 400' || norm.startsWith('POWER')) {
-    return 'POWER';
-  }
-  if (norm === 'PAPAS' || norm === 'PAPAS RIZADAS' || norm.includes('PAPAS') || norm.includes('PAPITA')) {
-    return 'PAPAS RIZADAS';
-  }
-  if (norm === 'FESTIVAL' || norm === 'GALLETAS FESTIVAL' || norm.includes('FESTIVAL')) {
-    return 'GALLETAS FESTIVAL';
-  }
-  if (norm === 'DORITOS' || norm === 'DORITO' || norm.includes('DORITO')) {
-    return 'DORITOS';
-  }
-  if (norm === 'JUGO HIT' || norm === 'HIT' || norm.includes('HIT')) {
-    return 'JUGO HIT';
-  }
-  if (norm === 'REFAJO' || norm.includes('REFAJO')) {
-    return 'REFAJO';
-  }
-  return String(rawName || '').trim();
+  return normalizeProductName(rawName);
 }
 
 export function matchOfficialProduct(productName: string): OfficialProductDefinition | null {
-  const norm = normalizeProductName(productName);
-  if (!norm) return null;
-
-  // Cualquier referencia a SPINAX se empareja estrictamente con SPEEDMAX
-  if (norm.includes('SPINAX') || norm.includes('SPEEDMAX') || norm.includes('SPEED MAX')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'speedmax') || null;
-  }
-
-  for (const official of OFFICIAL_KODIAK_PRODUCTS) {
-    const normOfficial = normalizeProductName(official.nombre);
-    if (norm === normOfficial) return official;
-    for (const alias of official.aliases) {
-      if (norm === normalizeProductName(alias)) return official;
-    }
-  }
-
-  // Emparejamiento semántico según reglas de equivalencia
-  if (norm.includes('PAPAS') || norm.includes('PAPITA')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'papas_rizadas') || null;
-  }
-  if (norm.includes('DORITO')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'doritos') || null;
-  }
-  if (norm.includes('FESTIVAL')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'galletas_festival') || null;
-  }
-  if (norm.includes('HIT')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'jugo_hit') || null;
-  }
-  if (norm.includes('QUATRO') || norm.includes('CUATRO')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'quatro') || null;
-  }
-  if (norm.includes('REFAJO')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'refajo') || null;
-  }
-  if (norm.includes('VALLE')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'jugo_del_valle') || null;
-  }
-  if (norm.includes('POWER')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'power') || null;
-  }
-  if (norm.includes('COCA') || norm.includes('COKE')) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'coca_cola') || null;
-  }
-  if (norm.includes('NATURAL') || norm === 'AGUA' || (norm.includes('AGUA') && !norm.includes('GAS'))) {
-    return OFFICIAL_KODIAK_PRODUCTS.find(p => p.key === 'agua_natural') || null;
-  }
-
-  return null;
+  const canonical = getCanonicalProductName(productName);
+  return OFFICIAL_KODIAK_PRODUCTS.find((product) => product.nombre === canonical) || null;
 }
 
-export const INITIAL_PRODUCTS_DATA: Product[] = [
-  {
-    id: 'prod-jugo-del-valle',
-    nombre: 'JUGO DEL VALLE',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 9,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-refajo',
-    nombre: 'REFAJO',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 11,
-    stockMinimo: 2,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-power',
-    nombre: 'POWER',
-    categoria: 'Bebidas',
-    precio: 5000,
-    stock: 14,
-    stockMinimo: 2,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-coca-cola',
-    nombre: 'COCA-COLA',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 12,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-jugo-hit',
-    nombre: 'JUGO HIT',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 9,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-quatro',
-    nombre: 'QUATRO',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 12,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-agua-natural',
-    nombre: 'AGUA NATURAL',
-    categoria: 'Bebidas',
-    precio: 3000,
-    stock: 22,
-    stockMinimo: 2,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-speedmax',
-    nombre: 'SPEEDMAX',
-    categoria: 'Bebidas',
-    precio: 4000,
-    stock: 12,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-doritos',
-    nombre: 'DORITOS',
-    categoria: 'Snacks',
-    precio: 4000,
-    stock: 5,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-papas',
-    nombre: 'PAPAS RIZADAS',
-    categoria: 'Snacks',
-    precio: 4000,
-    stock: 10,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-galletas-festival',
-    nombre: 'GALLETAS FESTIVAL',
-    categoria: 'Snacks',
-    precio: 2000,
-    stock: 11,
-    stockMinimo: 3,
-    estado: 'Disponible',
-    activo: true,
-    archivado: false,
-    oculto: false,
-    visible: true,
-    eliminado: false,
-    deleted: false,
-    status: 'active',
-    createdAt: '2026-08-29T00:00:00.000Z',
-    updatedAt: new Date().toISOString()
-  }
-];
-
-export interface EmployeeProfile {
-  id: string;
-  name: string;
-  nombreCompleto: string;
-  fechaNacimiento: string;
-  fechaNacimientoTexto: string;
-  rol: string;
-  activo: boolean;
-}
+/** Copia inicial únicamente si falta el catálogo remoto.
+ * Los stocks de esta referencia son los contados el 31-10-2026. */
+export const INITIAL_PRODUCTS_DATA: Product[] = OFFICIAL_KODIAK_PRODUCTS.map((product) => ({
+  id: product.id,
+  nombre: product.nombre,
+  categoria: product.categoria,
+  precio: product.precioSugerido, // 0 = precio pendiente; no inventar un precio de venta.
+  stock: product.stock,
+  stockMinimo: product.stockMinimo,
+  estado: product.stock === 0 ? 'Agotado' :
+    product.stock <= product.stockMinimo ? 'Bajo stock' : 'Disponible',
+  activo: true,
+  archivado: false,
+  oculto: false,
+  visible: true,
+  eliminado: false,
+  deleted: false,
+  status: 'active',
+  inventoryReferenceDate: '2026-10-31',
+  createdAt: '2026-10-31T00:00:00-05:00',
+  updatedAt: '2026-10-31T00:00:00-05:00'
+} as Product));
 
 export const ALLOWED_EMPLOYEES: EmployeeProfile[] = [
   {
