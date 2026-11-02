@@ -91,9 +91,28 @@ export const ProductosView: React.FC<ProductosProps> = ({
     return Array.isArray(products) ? products : [];
   }, [products]);
 
-  // Firebase es la única fuente de verdad: se filtran únicamente productos no archivados ni ocultos
+  // Mostrar una sola ficha por referencia, incluso si una lectura antigua de
+  // Firebase envía variantes del nombre (p. ej. JUGO DEL VALLE PET 400 ML).
+  // Esto no fusiona existencias ni cambia precios, ventas o documentos remotos.
   const visibleProducts = useMemo(() => {
-    return safeProducts.filter(isProductVisible);
+    const byName = new Map<string, Product>();
+    const ms = (p: any) => {
+      const values = [p?.lastMovementAt, p?.clientUpdatedAt, p?.updatedAt];
+      return Math.max(0, ...values.map((value) => {
+        const time = Date.parse(String(value || ''));
+        return Number.isFinite(time) ? time : 0;
+      }));
+    };
+    for (const product of safeProducts) {
+      if (!isProductVisible(product)) continue;
+      const canonical = getCanonicalProductName(product.nombre);
+      if (!matchOfficialProduct(canonical)) continue;
+      const existing = byName.get(canonical);
+      if (!existing || ms(product) > ms(existing)) {
+        byName.set(canonical, { ...product, nombre: canonical });
+      }
+    }
+    return [...byName.values()];
   }, [safeProducts]);
 
   const safeSales = Array.isArray(sales) ? sales : [];

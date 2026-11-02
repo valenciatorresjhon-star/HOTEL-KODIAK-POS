@@ -249,24 +249,28 @@ function forceArchiveProductIfHidden(product: any): any {
 function normalizeProductCollectionForStorage<T = any>(collectionName: string, items: T[]): T[] {
   if (collectionName !== 'hotel_products') return items;
   const rawList = Array.isArray(items) ? items : [];
-  const processed: any[] = [];
-  const seenCanonical = new Set<string>();
+  const byCanonical = new Map<string, any>();
+  const recordMs = (item: any) => {
+    const vals = [item?.lastMovementAt, item?.clientUpdatedAt, item?.updatedAt];
+    return Math.max(0, ...vals.map((value) => {
+      const ms = Date.parse(String(value || ''));
+      return Number.isFinite(ms) ? ms : 0;
+    }));
+  };
 
   for (const rawItem of rawList) {
     if (!rawItem) continue;
-    let item: any = { ...rawItem };
-    const rawName = String(item.nombre || item.name || '').trim();
-    const canonical = getCanonicalProductName(rawName);
-    item.nombre = canonical;
-
-    if (seenCanonical.has(canonical)) {
-      continue;
+    const canonical = getCanonicalProductName(rawItem.nombre || rawItem.name);
+    if (!canonical) continue;
+    const item = forceArchiveProductIfHidden({ ...rawItem, nombre: canonical });
+    const existing = byCanonical.get(canonical);
+    if (!existing ||
+      (isProductVisible(item) && !isProductVisible(existing)) ||
+      (isProductVisible(item) === isProductVisible(existing) && recordMs(item) > recordMs(existing))) {
+      byCanonical.set(canonical, item);
     }
-    seenCanonical.add(canonical);
-    processed.push(forceArchiveProductIfHidden(item));
   }
-
-  return processed as any;
+  return Array.from(byCanonical.values()) as any;
 }
 
 function normalizeShiftCollectionForStorage<T = any>(collectionName: string, items: T[]): T[] {

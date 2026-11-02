@@ -463,6 +463,13 @@ export function normalizeProductName(name: any): string {
 export function getCanonicalProductName(rawName: any): string {
   const norm = normalizeProductName(rawName).replace(/[.,_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!norm) return '';
+
+  // Unificar las variantes del mismo jugo, aunque Firestore tenga etiquetas
+  // adicionales como "PET 400 ML" o "BOTELLA". No alterar ningún precio/stock.
+  // La lista física del hotel contiene UNA sola referencia JUGO DEL VALLE.
+  if (/^(?:(?:BEBIDA|JUGO|JUGOS|NECTAR)\s+)*(?:(?:DEL|EL|DE)\s+)?VALLE(?:\s|$)/.test(norm)) {
+    return 'JUGO DEL VALLE';
+  }
   for (const product of OFFICIAL_KODIAK_PRODUCTS) {
     if ([product.nombre, ...product.aliases].some((name) =>
       normalizeProductName(name).replace(/[.,_-]+/g, ' ').replace(/\s+/g, ' ').trim() === norm
