@@ -81,7 +81,13 @@ export function reconcileAndSyncKodiakProducts(
     'AGUA NATURAL': 3000, 'SPEEDMAX': 4000, 'DORITOS': 4000,
     'PAPAS RIZADAS': 4000, 'GALLETAS FESTIVAL': 2000,
     // Precios respaldados por capturas del POS del 01/11/2026.
-    'GALLETAS MINICHIP': 3000, 'CERVEZA': 4000
+    'GALLETAS MINICHIP': 3000, 'CERVEZA': 4000,
+    // Valores previamente autorizados para las marcas de esas referencias.
+    'CHAMPÚ': 2000, 'CREMA PARA PEINAR': 3000, 'DESODORANTE': 3000,
+    'CIGARRILLO UNIDAD': 2000, 'CIGARRILLO PAQUETE': 15000,
+    'CREMA DENTAL': 5000, 'PRESTOBARBA': 3000,
+    // Datos directos del sistema (condones) y de un catálogo Kodiak anterior (agua).
+    'CONDONES': 6000, 'AGUA CON GAS': 3000
   };
 
   for (const item of all) {

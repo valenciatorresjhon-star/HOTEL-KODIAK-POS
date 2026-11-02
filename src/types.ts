@@ -416,6 +416,20 @@ export interface OfficialProductDefinition {
   aliases: string[];
 }
 
+/** Referencias de precios restauradas desde datos previos del usuario.
+ * El catálogo agrupa por tipo; marca registrada en origen:
+ * CHAMPÚ -> Head & Shoulders (2000)
+ * CREMA PARA PEINAR -> Sedal Rizos Definidos (3000)
+ * DESODORANTE -> Rexona Clinical (3000)
+ * CIGARRILLO UNIDAD -> Lucky Strike unidad (2000)
+ * CIGARRILLO PAQUETE -> Lucky Strike 10 Daiquiri (15000)
+ * CREMA DENTAL -> Colgate Triple Acción (5000)
+ * PRESTOBARBA -> Minora Plus II (3000)
+ * CONDONES -> precio observado en POS 01/11/2026 (6000);
+ *   el precio Tuli 2000 corresponde a otra presentación.
+ * AGUA CON GAS -> copia del catálogo Kodiak anterior (3000).
+ * Los precios actualmente POSITIVOS en Firebase siguen prevaleciendo.
+ */
 export const OFFICIAL_KODIAK_PRODUCTS: OfficialProductDefinition[] = [
   { key: "papas", id: "prod-papas", nombre: "PAPAS RIZADAS", stock: 4, stockMinimo: 3, categoria: "Snacks", precioSugerido: 4000, aliases: ["PAPAS RIZADAS","PAPAS","PAPA RIZADA","PAPAS MARGARITA"] },
   { key: "galletas_festival", id: "prod-galletas-festival", nombre: "GALLETAS FESTIVAL", stock: 6, stockMinimo: 3, categoria: "Snacks", precioSugerido: 2000, aliases: ["FESTIVAL","GALLETA FESTIVAL","GALLETAS FESTIVAL"] },
@@ -424,19 +438,19 @@ export const OFFICIAL_KODIAK_PRODUCTS: OfficialProductDefinition[] = [
   { key: "de_toditos", id: "prod-de-toditos", nombre: "DE TODITOS", stock: 5, stockMinimo: 0, categoria: "Snacks", precioSugerido: 0, aliases: ["DE TODITOS","DETODITOS"] },
   { key: "trident", id: "prod-trident", nombre: "TRIDENT", stock: 3, stockMinimo: 0, categoria: "Snacks", precioSugerido: 0, aliases: ["TRIDENT","CHICLE TRIDENT"] },
   { key: "galletas_minichip", id: "prod-galletas-minichip", nombre: "GALLETAS MINICHIP", stock: 9, stockMinimo: 0, categoria: "Snacks", precioSugerido: 3000, aliases: ["GALLETAS MINICHIP","GALLETA MINICHIP","MINICHIPS","GALLETAS MINI CHIP"] },
-  { key: "champu", id: "prod-champu", nombre: "CHAMPÚ", stock: 1, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CHAMPU","SHAMPOO","SHAMPO","CHAMPÚ"] },
-  { key: "crema_peinar", id: "prod-crema-peinar", nombre: "CREMA PARA PEINAR", stock: 10, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CREMA PEINAR","CREMA PARA PEINAR"] },
-  { key: "desodorante", id: "prod-desodorante", nombre: "DESODORANTE", stock: 5, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["DESODORANTE","DESODORANTES"] },
-  { key: "cigarrillo_unidad", id: "prod-cigarrillo-unidad", nombre: "CIGARRILLO UNIDAD", stock: 49, stockMinimo: 0, categoria: "Otros", precioSugerido: 0, aliases: ["CIGARRILLO UNIDAD","CIGARRILLO UNI","CIGARRILLO SUELTO","CIGARRILLOS UNIDAD"] },
-  { key: "cigarrillo_paquete", id: "prod-cigarrillo-paquete", nombre: "CIGARRILLO PAQUETE", stock: 5, stockMinimo: 0, categoria: "Otros", precioSugerido: 0, aliases: ["CIGARRILLO PAQUETE","CIGARRILLO PAQ","CIGARRILLO PQT","CAJETILLA CIGARRILLOS","PAQUETE CIGARRILLOS"] },
-  { key: "crema_dental", id: "prod-crema-dental", nombre: "CREMA DENTAL", stock: 2, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CREMA DENTAL","PASTA DENTAL"] },
-  { key: "prestobarba", id: "prod-prestobarba", nombre: "PRESTOBARBA", stock: 9, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["PRESTOBARBA","PRESTO BARBA","MAQUINA DE AFEITAR"] },
-  { key: "condones", id: "prod-condones", nombre: "CONDONES", stock: 13, stockMinimo: 0, categoria: "Aseo", precioSugerido: 0, aliases: ["CONDONES","PRESERVATIVOS","CONDON"] },
+  { key: "champu", id: "prod-champu", nombre: "CHAMPÚ", stock: 1, stockMinimo: 0, categoria: "Aseo", precioSugerido: 2000, aliases: ["CHAMPU","SHAMPOO","SHAMPO","CHAMPÚ"] },
+  { key: "crema_peinar", id: "prod-crema-peinar", nombre: "CREMA PARA PEINAR", stock: 10, stockMinimo: 0, categoria: "Aseo", precioSugerido: 3000, aliases: ["CREMA PEINAR","CREMA PARA PEINAR"] },
+  { key: "desodorante", id: "prod-desodorante", nombre: "DESODORANTE", stock: 5, stockMinimo: 0, categoria: "Aseo", precioSugerido: 3000, aliases: ["DESODORANTE","DESODORANTES"] },
+  { key: "cigarrillo_unidad", id: "prod-cigarrillo-unidad", nombre: "CIGARRILLO UNIDAD", stock: 49, stockMinimo: 0, categoria: "Otros", precioSugerido: 2000, aliases: ["CIGARRILLO UNIDAD","CIGARRILLO UNI","CIGARRILLO SUELTO","CIGARRILLOS UNIDAD"] },
+  { key: "cigarrillo_paquete", id: "prod-cigarrillo-paquete", nombre: "CIGARRILLO PAQUETE", stock: 5, stockMinimo: 0, categoria: "Otros", precioSugerido: 15000, aliases: ["CIGARRILLO PAQUETE","CIGARRILLO PAQ","CIGARRILLO PQT","CAJETILLA CIGARRILLOS","PAQUETE CIGARRILLOS"] },
+  { key: "crema_dental", id: "prod-crema-dental", nombre: "CREMA DENTAL", stock: 2, stockMinimo: 0, categoria: "Aseo", precioSugerido: 5000, aliases: ["CREMA DENTAL","PASTA DENTAL"] },
+  { key: "prestobarba", id: "prod-prestobarba", nombre: "PRESTOBARBA", stock: 9, stockMinimo: 0, categoria: "Aseo", precioSugerido: 3000, aliases: ["PRESTOBARBA","PRESTO BARBA","MAQUINA DE AFEITAR"] },
+  { key: "condones", id: "prod-condones", nombre: "CONDONES", stock: 13, stockMinimo: 0, categoria: "Aseo", precioSugerido: 6000, aliases: ["CONDONES","PRESERVATIVOS","CONDON"] },
   { key: "speedmax", id: "prod-speedmax", nombre: "SPEEDMAX", stock: 5, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["SPEEDMAX","SPEED MAX","SPINAX","SPINMAX","SPEED"] },
   { key: "jugo_del_valle", id: "prod-jugo-del-valle", nombre: "JUGO DEL VALLE", stock: 4, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["JUGO DEL VALLE","JUGOS DEL VALLE","JUGO DEL VALLE PET 400","DEL VALLE","JUGO VALLE"] },
   { key: "coca_cola", id: "prod-coca-cola", nombre: "COCA-COLA", stock: 16, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["COCA-COLA","COCA COLA","COCACOLA","COKE","COCA COLA PET 400"] },
   { key: "agua_natural", id: "prod-agua-natural", nombre: "AGUA NATURAL", stock: 15, stockMinimo: 2, categoria: "Bebidas", precioSugerido: 3000, aliases: ["AGUA","AGUAS","AGUA NATURAL","AGUA SIN GAS","AGUA PURIFICADA","BOTELLA DE AGUA"] },
-  { key: "agua_con_gas", id: "prod-agua-con-gas", nombre: "AGUA CON GAS", stock: 13, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 0, aliases: ["AGUA CON GAS","AGUA GASIFICADA","AGUA GAS"] },
+  { key: "agua_con_gas", id: "prod-agua-con-gas", nombre: "AGUA CON GAS", stock: 13, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 3000, aliases: ["AGUA CON GAS","AGUA GASIFICADA","AGUA GAS"] },
   { key: "power", id: "prod-power", nombre: "POWER", stock: 5, stockMinimo: 2, categoria: "Bebidas", precioSugerido: 5000, aliases: ["POWER","POWER PET 400","POWER PET 400 ML","POWERADE","POWER ADE"] },
   { key: "quatro", id: "prod-quatro", nombre: "QUATRO", stock: 7, stockMinimo: 3, categoria: "Bebidas", precioSugerido: 4000, aliases: ["QUATRO","CUATRO","QUATRO PET 400","CUATRO PET 400"] },
   { key: "cerveza", id: "prod-cerveza", nombre: "CERVEZA", stock: 33, stockMinimo: 0, categoria: "Bebidas", precioSugerido: 4000, aliases: ["CERVEZA","CERVEZAS"] },
