@@ -640,8 +640,12 @@ async function saveDocumentSafely<T extends { id?: string }>(
     clientUpdatedAt: now
   });
 
-  // 1. Guardado inmediato local para que sobreviva recarga, apagón o cierre de Chrome.
-  upsertLocalDocument(collectionName, safeDocId, localData, false);
+  // 1. Guardado local; las ediciones de productos entran en la cola ANTES
+  // de esperar a Firebase, para que cerrar la pestaña no pierda la operación.
+  upsertLocalDocument(collectionName, safeDocId, localData, waitForFirebaseMs > 0);
+  if (waitForFirebaseMs > 0) {
+    queuePendingSync(collectionName, safeDocId, localData, 'set', true);
+  }
 
   // 2. Si no hay Firebase o no hay internet, queda en cache local y, si aplica, en cola.
   if (!isFirebaseConfigured) {
