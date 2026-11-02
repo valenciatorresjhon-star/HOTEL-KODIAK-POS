@@ -1,4 +1,5 @@
 import { Product, OFFICIAL_KODIAK_PRODUCTS, getCanonicalProductName, isProductArchivedOrHidden } from '../types';
+import { safeGetLocalStorage } from '../utils/storage';
 
 export interface ProductReconciliationResult {
   consolidated: Product[];
@@ -60,6 +61,27 @@ export function reconcileAndSyncKodiakProducts(
   const byCanonical = new Map<string, any[]>();
   const all = Array.isArray(remoteItems) ? remoteItems.filter(Boolean) : [];
 
+  // Recuperar precios guardados previamente en este equipo únicamente cuando
+  // el documento actual tiene precio cero. No son precios inventados.
+  const localRecords = safeGetLocalStorage<Product[]>('hotel_products', []);
+  const historicLocalPrices = new Map<string, number>();
+  for (const item of Array.isArray(localRecords) ? localRecords : []) {
+    const name = getCanonicalProductName(item?.nombre);
+    const price = Number(item?.precio);
+    if (name && Number.isFinite(price) && price > 0 && !historicLocalPrices.has(name)) {
+      historicLocalPrices.set(name, price);
+    }
+  }
+
+  // Estos once precios se documentaron antes del cambio de inventario.
+  // Ningún otro precio se completa mediante suposiciones.
+  const knownHistoricalPrices: Record<string, number> = {
+    'JUGO DEL VALLE': 4000, 'REFAJO': 4000, 'POWER': 5000,
+    'COCA-COLA': 4000, 'JUGO HIT': 4000, 'QUATRO': 4000,
+    'AGUA NATURAL': 3000, 'SPEEDMAX': 4000, 'DORITOS': 4000,
+    'PAPAS RIZADAS': 4000, 'GALLETAS FESTIVAL': 2000
+  };
+
   for (const item of all) {
     const canonical = getCanonicalProductName(item.nombre || item.name);
     if (!canonical) continue;
@@ -94,16 +116,30 @@ export function reconcileAndSyncKodiakProducts(
       const stock = Number.isFinite(Number(winner.stock)) ? Math.max(0, Number(winner.stock)) : 0;
       const estado: Product['estado'] =
         stock <= 0 ? 'Agotado' : stock <= Number(winner.stockMinimo || 0) ? 'Bajo stock' : 'Disponible';
+      const currentPrice = Number(winner.precio);
+      const verifiedRemotePrice = entries
+        .filter((item) => Number.isFinite(Number(item.precio)) && Number(item.precio) > 0)
+        .sort(compareCandidates)
+        .map((item) => Number(item.precio))[0];
+      // Prioridad: precio actual válido; un documento existente del mismo
+      // producto; precio anterior guardado localmente; once valores documentados.
+      const recoveredPrice = currentPrice > 0 ? currentPrice
+        : (verifiedRemotePrice || historicLocalPrices.get(target.nombre)
+          || knownHistoricalPrices[target.nombre] || 0);
+      const priceWasRecovered = !(currentPrice > 0) && recoveredPrice > 0;
       const canonicalProduct: Product = {
         ...winner,
         nombre: target.nombre,
+        ...(priceWasRecovered ? { precio: recoveredPrice } : {}),
         stock,
         estado,
         activo: true, archivado: false, oculto: false, visible: true,
-        eliminado: false, deleted: false, isDeleted: false, status: 'active'
+        eliminado: false, deleted: false, isDeleted: false, status: 'active',
+        // Indicador temporal para el guardado seguro; no es un campo de Firebase.
+        ...(priceWasRecovered ? { __verifiedPriceRecovery: true } : {})
       } as Product;
       consolidated.push(canonicalProduct);
-      if (winner.nombre !== target.nombre || isProductArchivedOrHidden(winner)) {
+      if (winner.nombre !== target.nombre || isProductArchivedOrHidden(winner) || priceWasRecovered) {
         queueSave(canonicalProduct);
       }
       // Duplicados ocultos, pero NO borrados: conservan identidad y trazabilidad.
@@ -113,12 +149,21 @@ export function reconcileAndSyncKodiakProducts(
         }
       }
     } else {
+      // No crear productos ficticios a $0: antes se mostraban como
+      // "Precio pendiente" aunque el propietario ya hubiera fijado tarifas.
+      // Crear solamente si hay un precio anterior verificable.
+      const existingPrice = historicLocalPrices.get(target.nombre) ||
+        knownHistoricalPrices[target.nombre] || 0;
+      if (!(existingPrice > 0)) {
+        console.warn('[Hotel Kodiak] Producto no creado por falta de precio histórico verificable:', target.nombre);
+        continue;
+      }
       // Referencia completamente ausente: se crea una sola vez, con ID estable.
       // El stock corresponde al conteo físico del 31/10/2026.
       const now = new Date().toISOString();
       const created: Product = {
         id: target.preferredId, nombre: target.nombre, categoria: target.categoria,
-        precio: target.precio, stock: target.stock, stockMinimo: target.stockMinimo,
+        precio: existingPrice, stock: target.stock, stockMinimo: target.stockMinimo,
         estado: target.stock === 0 ? 'Agotado' :
           target.stock <= target.stockMinimo ? 'Bajo stock' : 'Disponible',
         activo: true, archivado: false, oculto: false, visible: true,

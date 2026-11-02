@@ -1201,6 +1201,11 @@ const saveProductCatalogMetadataToFirestore = async (product: Product): Promise<
     status: item.status
   };
   if (item.motivoDesactivacion) patch.motivoDesactivacion = item.motivoDesactivacion;
+  // Única excepción: restaurar un precio previo comprobado para un registro
+  // que accidentalmente quedó en cero. No modificar precios ya positivos.
+  if (item.__verifiedPriceRecovery === true && Number(item.precio) > 0) {
+    patch.precio = Number(item.precio);
+  }
   await updateDoc(doc(db, 'hotel_products', id), sanitizeForFirestore(patch));
 };
 

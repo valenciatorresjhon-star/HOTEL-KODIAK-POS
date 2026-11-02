@@ -478,11 +478,15 @@ export function matchOfficialProduct(productName: string): OfficialProductDefini
 
 /** Copia inicial únicamente si falta el catálogo remoto.
  * Los stocks de esta referencia son los contados el 31-10-2026. */
-export const INITIAL_PRODUCTS_DATA: Product[] = OFFICIAL_KODIAK_PRODUCTS.map((product) => ({
+export const INITIAL_PRODUCTS_DATA: Product[] = OFFICIAL_KODIAK_PRODUCTS
+  // No crear entradas con precio artificial $0 en el modo local.
+  // Las referencias con precio previo desconocido se recuperan de Firestore.
+  .filter((product) => product.precioSugerido > 0)
+  .map((product) => ({
   id: product.id,
   nombre: product.nombre,
   categoria: product.categoria,
-  precio: product.precioSugerido, // 0 = precio pendiente; no inventar un precio de venta.
+  precio: product.precioSugerido, // Precio original documentado; nunca sustituir tarifas en Firebase.
   stock: product.stock,
   stockMinimo: product.stockMinimo,
   estado: product.stock === 0 ? 'Agotado' :
