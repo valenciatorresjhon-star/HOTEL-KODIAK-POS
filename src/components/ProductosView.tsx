@@ -72,7 +72,8 @@ interface ProductosProps {
   activeShift: Shift;
   products: Product[];
   sales?: Sale[];
-  onUpdateProducts: (updated: Product[]) => void | Promise<void>;
+  onUpdateProducts: (updated: Product[]) =>
+    void | Promise<void | 'synced' | 'pending'>;
   onAddSale: (sale: Sale) => void | Promise<void>;
   userProfile?: FirebaseUser | null;
   hotelSettings?: any;
@@ -364,8 +365,9 @@ export const ProductosView: React.FC<ProductosProps> = ({
     // La versión anterior cerraba el modal y mostraba “éxito” aunque Firebase todavía
     // no hubiese terminado (o incluso aunque el snapshot remoto revirtiera el cambio).
     setEditSaving(true);
+    let result: void | 'synced' | 'pending';
     try {
-      await Promise.resolve(onUpdateProducts(updated));
+      result = await Promise.resolve(onUpdateProducts(updated));
     } catch (error: any) {
       console.error('[ProductosView] No se pudo guardar la modificación del producto:', error);
       setErrorMsg(error?.message || 'No fue posible guardar el producto. Revise la conexión e intente nuevamente.');
@@ -398,13 +400,17 @@ export const ProductosView: React.FC<ProductosProps> = ({
         employeeName: activeShift?.empleada || userProfile?.nombre || 'Sistema',
         createdBy: auth?.currentUser?.uid || userProfile?.uid || ''
       } as any;
-      onAddSale(auditMovement);
+      Promise.resolve(onAddSale(auditMovement)).catch((error) => {
+        console.warn('[ProductosView] No se pudo sincronizar el registro de auditoría:', error);
+      });
     }
 
     setEditSaving(false);
     setEditingProduct(null);
-    setSuccessMsg('Producto modificado y guardado.');
-    setTimeout(() => setSuccessMsg(''), 4000);
+    setSuccessMsg(result === 'pending'
+      ? 'Cambio guardado en este equipo. Pendiente de confirmar en Firebase.'
+      : 'Producto modificado y confirmado.');
+    setTimeout(() => setSuccessMsg(''), 8000);
   };
 
   // Function to open the cash drawer

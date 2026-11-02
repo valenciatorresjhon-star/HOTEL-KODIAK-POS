@@ -1265,7 +1265,8 @@ export default function App() {
         return ['nombre','precio','stock','stockMinimo','categoria','activo','archivado','oculto']
           .some((key) => (p as any)[key] !== (original as any)[key]);
       });
-      await Promise.all(changed.map((p) => saveProductToFirestore(p)));
+      const results = await Promise.all(changed.map((p) => saveProductToFirestore(p)));
+      return results.includes('pending') ? 'pending' as const : 'synced' as const;
     } catch (err) {
       console.error("[handleUpdateProducts] Error al guardar productos:", err);
       throw err;

@@ -627,8 +627,9 @@ async function saveDocumentSafely<T extends { id?: string }>(
   collectionName: string,
   docId: string,
   data: T,
-  operation: 'create' | 'update' = 'create'
-): Promise<void> {
+  operation: 'create' | 'update' = 'create',
+  waitForFirebaseMs: number = 0
+): Promise<'synced' | 'pending'> {
   const safeDocId = docId || (data as any)?.id || `${collectionName}-${Date.now()}`;
   const now = new Date().toISOString();
 
@@ -644,29 +645,51 @@ async function saveDocumentSafely<T extends { id?: string }>(
 
   // 2. Si no hay Firebase o no hay internet, queda en cache local y, si aplica, en cola.
   if (!isFirebaseConfigured) {
-    return;
+    if (waitForFirebaseMs > 0) {
+      upsertLocalDocument(collectionName, safeDocId, localData, true);
+      queuePendingSync(collectionName, safeDocId, localData, 'set', true);
+    }
+    return 'pending';
   }
 
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     upsertLocalDocument(collectionName, safeDocId, localData, true);
     queuePendingSync(collectionName, safeDocId, localData, 'set', true);
-    return;
+    return 'pending';
   }
 
-  // 3. Intento de subida a Firebase.
+  // 3. Espera acotada exclusivamente para ediciones de productos.
+  // Firestore puede dejar setDoc pendiente aun cuando navigator.onLine sea true.
+  // Si no llega confirmación, guardamos la edición en la cola persistente.
   try {
-    await writeFirestoreSet(collectionName, safeDocId, {
+    const write = writeFirestoreSet(collectionName, safeDocId, {
       ...localData,
       syncPending: false,
       sincronizacionPendiente: false,
       syncedAt: new Date().toISOString()
     }, true);
+    if (waitForFirebaseMs > 0) {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          write,
+          new Promise<never>((_resolve, reject) => {
+            timeoutId = setTimeout(() => reject(new Error('Firebase no confirmó el guardado dentro del plazo.')), waitForFirebaseMs);
+          })
+        ]);
+      } finally {
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
+      }
+    } else {
+      await write;
+    }
     removePendingSync(collectionName, safeDocId);
+    return 'synced';
   } catch (error) {
     logFirestoreError(operation, collectionName, safeDocId, error, 'firebaseService.ts');
     upsertLocalDocument(collectionName, safeDocId, localData, true);
     queuePendingSync(collectionName, safeDocId, localData, 'set', true);
-    // No lanzamos error: el POS no puede perder la operación ni quedarse bloqueado.
+    return 'pending';
   }
 }
 
@@ -1272,7 +1295,9 @@ export const saveProductToFirestore = async (product: Product) => {
     (toSave as any).docId ||
     normalized.id
   ).trim();
-  await saveDocumentSafely('hotel_products', firestoreDocId, normalized, 'update');
+  // Un fallo temporal de Firestore no debe bloquear indefinidamente el formulario.
+  // El estado 'pending' se informa al operador; no equivale a guardado remoto.
+  return await saveDocumentSafely('hotel_products', firestoreDocId, normalized, 'update', 10000);
 };
 
 export const deleteProductFromFirestore = async (productId: string) => {
