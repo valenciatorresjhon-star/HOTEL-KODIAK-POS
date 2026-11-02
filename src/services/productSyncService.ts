@@ -79,7 +79,9 @@ export function reconcileAndSyncKodiakProducts(
     'JUGO DEL VALLE': 4000, 'REFAJO': 4000, 'POWER': 5000,
     'COCA-COLA': 4000, 'JUGO HIT': 4000, 'QUATRO': 4000,
     'AGUA NATURAL': 3000, 'SPEEDMAX': 4000, 'DORITOS': 4000,
-    'PAPAS RIZADAS': 4000, 'GALLETAS FESTIVAL': 2000
+    'PAPAS RIZADAS': 4000, 'GALLETAS FESTIVAL': 2000,
+    // Precios respaldados por capturas del POS del 01/11/2026.
+    'GALLETAS MINICHIP': 3000, 'CERVEZA': 4000
   };
 
   for (const item of all) {
