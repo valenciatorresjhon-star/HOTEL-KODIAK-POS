@@ -1201,16 +1201,29 @@ const saveProductCatalogMetadataToFirestore = async (product: Product): Promise<
     status: item.status
   };
   if (item.motivoDesactivacion) patch.motivoDesactivacion = item.motivoDesactivacion;
-  // Única excepción: restaurar un precio previo comprobado para un registro
-  // que accidentalmente quedó en cero. No modificar precios ya positivos.
+  // La corrección nunca debe sustituir un precio actual válido de Firebase.
+  // La transacción vuelve a leer el documento antes de reparar un precio en 0.
+  const productRef = doc(db, 'hotel_products', id);
   if (item.__verifiedPriceRecovery === true && Number(item.precio) > 0) {
-    patch.precio = Number(item.precio);
+    await runTransaction(db, async (transaction) => {
+      const current = await transaction.get(productRef);
+      if (!current.exists()) return; // No recrear registros eliminados.
+      const livePrice = Number(current.data()?.precio);
+      const safePatch = { ...patch };
+      if (!(Number.isFinite(livePrice) && livePrice > 0)) {
+        safePatch.precio = Number(item.precio);
+      }
+      transaction.update(productRef, sanitizeForFirestore(safePatch));
+    });
+  } else {
+    await updateDoc(productRef, sanitizeForFirestore(patch));
   }
-  await updateDoc(doc(db, 'hotel_products', id), sanitizeForFirestore(patch));
 };
 
 export const saveProductToFirestore = async (product: Product) => {
-  let toSave = { ...product } as Product & { firestoreId?: string; documentId?: string; docId?: string };
+  // El indicador de recuperación no es un dato del inventario.
+  const { __verifiedPriceRecovery: _temporaryPriceRecovery, ...safeProduct } = product as any;
+  let toSave = { ...safeProduct } as Product & { firestoreId?: string; documentId?: string; docId?: string };
   const rawName = String(toSave.nombre || '').trim();
   const canonicalName = getCanonicalProductName(rawName);
   toSave.nombre = canonicalName;
