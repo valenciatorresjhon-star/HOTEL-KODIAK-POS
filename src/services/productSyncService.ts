@@ -124,30 +124,18 @@ export function reconcileAndSyncKodiakProducts(
       const stock = Number.isFinite(Number(winner.stock)) ? Math.max(0, Number(winner.stock)) : 0;
       const estado: Product['estado'] =
         stock <= 0 ? 'Agotado' : stock <= Number(winner.stockMinimo || 0) ? 'Bajo stock' : 'Disponible';
-      const currentPrice = Number(winner.precio);
-      const verifiedRemotePrice = entries
-        .filter((item) => Number.isFinite(Number(item.precio)) && Number(item.precio) > 0)
-        .sort(compareCandidates)
-        .map((item) => Number(item.precio))[0];
-      // Prioridad: precio actual válido; un documento existente del mismo
-      // producto; precio anterior guardado localmente; once valores documentados.
-      const recoveredPrice = currentPrice > 0 ? currentPrice
-        : (verifiedRemotePrice || historicLocalPrices.get(target.nombre)
-          || knownHistoricalPrices[target.nombre] || 0);
-      const priceWasRecovered = !(currentPrice > 0) && recoveredPrice > 0;
+      // Mostrar el precio realmente almacenado. La recuperación requiere
+      // consultar el servidor, descargar respaldo y una acción del administrador.
       const canonicalProduct: Product = {
         ...winner,
         nombre: target.nombre,
-        ...(priceWasRecovered ? { precio: recoveredPrice } : {}),
         stock,
         estado,
         activo: true, archivado: false, oculto: false, visible: true,
-        eliminado: false, deleted: false, isDeleted: false, status: 'active',
-        // Indicador temporal para el guardado seguro; no es un campo de Firebase.
-        ...(priceWasRecovered ? { __verifiedPriceRecovery: true } : {})
+        eliminado: false, deleted: false, isDeleted: false, status: 'active'
       } as Product;
       consolidated.push(canonicalProduct);
-      if (winner.nombre !== target.nombre || isProductArchivedOrHidden(winner) || priceWasRecovered) {
+      if (winner.nombre !== target.nombre || isProductArchivedOrHidden(winner)) {
         queueSave(canonicalProduct);
       }
       // Duplicados ocultos, pero NO borrados: conservan identidad y trazabilidad.
@@ -185,3 +173,4 @@ export function reconcileAndSyncKodiakProducts(
   }
   return { consolidated, actionsToRun };
 }
+
