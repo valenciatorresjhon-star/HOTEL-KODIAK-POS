@@ -1067,10 +1067,14 @@ export const subscribeToCollection = <T>(
 
       // Firebase es la ÚNICA FUENTE DE VERDAD.
       // Reconciliamos nombres canónicos, consolidamos duplicados y garantizamos catálogo dinámico.
-      const { consolidated, actionsToRun } = reconcileAndSyncKodiakProducts(
+      // Protección del catálogo: una lectura de Firebase NUNCA debe
+      // crear productos, archivar duplicados ni corregir precios/stock.
+      // El listado consolidado es solo una representación para la pantalla.
+      // Todas las modificaciones persistentes requieren una acción explícita.
+      const { consolidated } = reconcileAndSyncKodiakProducts(
         remoteItems,
-        saveProductCatalogMetadataToFirestore,
-        deleteProductFromFirestore
+        async () => {},
+        async () => {}
       );
       saveLocalCollection('hotel_products', consolidated);
 
@@ -1085,12 +1089,6 @@ export const subscribeToCollection = <T>(
       }
 
       callback(consolidated as T[]);
-
-      if (actionsToRun.length > 0) {
-        Promise.all(actionsToRun.map((act) => act())).catch((err) => {
-          console.warn("[subscribeToCollection] Error en reconciliación de productos:", err);
-        });
-      }
 
       syncPendingOperationsToFirestore().catch((error) => {
         console.warn("No se pudo sincronizar pendientes después de recibir snapshot:", error);
