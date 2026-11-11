@@ -6,6 +6,7 @@ import { AdminPasswordModal } from './AdminPasswordModal';
 import { auth } from '../firebase';
 import { getPrinterStatus, printReceipt, openCashDrawer as realOpenCashDrawer, getSettings, openBrowserPrintWindow, setBrowserPrintWindow } from '../services/printerService';
 import { archiveProductToFirestore } from '../services/firebaseService';
+import { PriceRecoveryPanel } from './PriceRecoveryPanel';
 function normalizePaymentMethod(method: any): string {
   return String(method || "")
     .trim()
@@ -884,6 +885,7 @@ export const ProductosView: React.FC<ProductosProps> = ({
       )}
 
       {/* Grid of stock cards */}
+      {userProfile?.rol === 'admin' && <PriceRecoveryPanel />}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {visibleProducts.map((p) => {
           const isLow = p.stock <= p.stockMinimo;
