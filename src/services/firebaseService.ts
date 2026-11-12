@@ -1117,9 +1117,11 @@ export const subscribeToCollection = <T>(
 
       callback(consolidated as T[]);
 
-      syncPendingOperationsToFirestore().catch((error) => {
+      if (cachedUserProfile?.rol !== 'visor') {
+        syncPendingOperationsToFirestore().catch((error) => {
         console.warn("No se pudo sincronizar pendientes después de recibir snapshot:", error);
-      });
+        });
+      }
 
       return;
     }
@@ -1162,9 +1164,11 @@ export const subscribeToCollection = <T>(
     callback(merged as T[]);
 
     // Si hay pendientes, intentamos sincronizar sin bloquear la pantalla.
-    syncPendingOperationsToFirestore().catch((error) => {
+    if (cachedUserProfile?.rol !== 'visor') {
+      syncPendingOperationsToFirestore().catch((error) => {
       console.warn("No se pudo sincronizar pendientes después de recibir snapshot:", error);
-    });
+      });
+    }
   }, (error) => {
     logFirestoreError('read', collectionName, 'query', error, 'firebaseService.ts');
 
