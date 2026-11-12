@@ -260,7 +260,8 @@ function normalizeProductCollectionForStorage<T = any>(collectionName: string, i
 
   for (const rawItem of rawList) {
     if (!rawItem) continue;
-    const canonical = getCanonicalProductName(rawItem.nombre || rawItem.name);
+    const candidate = rawItem as any;
+    const canonical = getCanonicalProductName(candidate.nombre || candidate.name);
     if (!canonical) continue;
     const item = forceArchiveProductIfHidden({ ...rawItem, nombre: canonical });
     const existing = byCanonical.get(canonical);
