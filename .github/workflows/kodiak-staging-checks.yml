@@ -1,0 +1,27 @@
+name: Validar Hotel Kodiak (sin despliegue)
+on:
+  push:
+    branches:
+      - codex/owner-mobile-staging
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  comprobacion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Comprobar tipos TypeScript
+        run: npm run lint
+      - name: Compilar sin credenciales de produccion
+        run: npm run build
