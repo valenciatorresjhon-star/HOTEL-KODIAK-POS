@@ -541,6 +541,11 @@ async function writeFirestoreSet(collectionName: string, docId: string, data: an
 }
 
 export async function syncPendingOperationsToFirestore(): Promise<{ success: boolean; remaining: number }> {
+  // No reenviar datos en un acceso de consulta o con un perfil no autenticado.
+  // La cola de operaciones sigue almacenada, pero no se transmite a Firebase.
+  if (!cachedUserProfile || cachedUserProfile.rol === 'visor' || auth?.currentUser?.uid !== cachedUserProfile.uid) {
+    return { success: false, remaining: loadPendingSync().length };
+  }
   if (!isFirebaseConfigured || !hasBrowserStorage()) {
     return { success: false, remaining: loadPendingSync().length };
   }
@@ -1149,7 +1154,9 @@ export const subscribeToCollection = <T>(
       return;
     }
 
-    const merged = mergeCollectionsPreferNewest(collectionName, normalizedRemoteItems);
+    const merged = cachedUserProfile?.rol === 'visor'
+      ? normalizedRemoteItems // El estado del propietario proviene de Firestore, no del caché del navegador.
+      : mergeCollectionsPreferNewest(collectionName, normalizedRemoteItems);
 
     if (orderField) {
       merged.sort((a: any, b: any) => {
