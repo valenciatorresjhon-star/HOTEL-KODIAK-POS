@@ -913,7 +913,9 @@ export default function App() {
         }
       } else {
         // Mezclar Firestore con respaldo local: gana la versión con updatedAt más reciente.
-        let currentRooms = mergeFirestoreRoomsWithLocalBackup(cloudItems);
+        let currentRooms = userProfile?.rol === 'visor'
+          ? cloudItems // El visor remoto recibe la versión autorizada de Firebase, sin sobrescritura de caché local.
+          : mergeFirestoreRoomsWithLocalBackup(cloudItems);
 
         // Catálogo oficial Hotel Kodiak: se muestran solo 17 habitaciones oficiales.
         // No se borran documentos viejos ni históricos: las duplicadas simplemente no se usan en pantalla.
@@ -988,7 +990,7 @@ export default function App() {
         return s;
       });
 
-      if (hasLegacyBase) {
+      if (hasLegacyBase && userProfile?.rol !== 'visor') {
         sanitizedItems.forEach((s) => {
           if (s.estado === 'abierto') {
             saveShiftToFirestore(s).catch((err) => console.warn("Error guardando turno con base inicial 0:", err));
