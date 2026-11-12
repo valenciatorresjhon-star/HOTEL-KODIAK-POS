@@ -45,7 +45,6 @@ import { buildOfficialRoomsFromExisting, hydrateOfficialRoom, KODIAK_OFFICIAL_RO
 import { auth, isFirebaseConfigured } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { LoginView } from './components/LoginView';
-import { OwnerMobileView } from './components/OwnerMobileView';
 import { 
   subscribeToCollection,
   saveRoomToFirestore,
@@ -79,6 +78,9 @@ import {
   printExpenseReceipt,
   getSettings
 } from './services/printerService';
+
+// El panel del propietario se descarga solo cuando ingresa su perfil.
+const OwnerMobileView = React.lazy(() => import('./components/OwnerMobileView').then((module) => ({ default: module.OwnerMobileView })));
 
 type TabType = 'inicio' | 'habitaciones' | 'productos' | 'caja' | 'dashboard' | 'clientes' | 'reservas' | 'cierre';
 
@@ -1895,6 +1897,7 @@ export default function App() {
   if (userProfile.rol === 'visor') {
     return (
       <>
+        <React.Suspense fallback={<div role="status" style={{ padding: 24 }}>Cargando panel del propietario...</div>}>
         <OwnerMobileView
           rooms={rooms}
           clients={clients}
@@ -1911,6 +1914,7 @@ export default function App() {
           systemAlerts={systemAlerts}
           dailyReport={dailyReport}
         />
+        </React.Suspense>
         {renderGlobalModals()}
       </>
     );
