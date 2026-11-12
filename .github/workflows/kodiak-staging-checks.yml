@@ -20,7 +20,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Instalar dependencias
-        run: npm ci
+        run: npm install --no-audit --no-fund # Temporal: el lockfile actual no contiene xlsx
       - name: Comprobar tipos TypeScript
         run: npm run lint
       - name: Compilar sin credenciales de produccion
