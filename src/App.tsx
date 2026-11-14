@@ -1359,7 +1359,8 @@ export default function App() {
       }
 
       // --- INTEGRATED PRINTER & DRAWER LOGIC AFTER SUCCESSFUL SALE ---
-      const autoPrint = hotelSettings?.autoPrintEnabled ?? true;
+      // Recibo automático solo para movimientos de venta pagados en efectivo.
+      const autoPrint = newSale.metodoPago === 'Efectivo' && Number(newSale.total) > 0;
       const autoOpen = hotelSettings?.autoOpenDrawer ?? true;
       const cashOnly = hotelSettings?.openDrawerCashOnly ?? true;
 
@@ -1518,7 +1519,9 @@ export default function App() {
 
       // 2. Trigger receipt printing
       try {
-        await printExpenseReceipt(newExpense, initialPrintWindow);
+        if (newExpense.metodoPago === 'Efectivo') {
+          await printExpenseReceipt(newExpense, initialPrintWindow);
+        }
       } catch (err: any) {
         console.error("Fallo impresión recibo de egreso:", err);
       }
@@ -2223,7 +2226,7 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'reservas' && (
+          {false && activeTab === 'reservas' && (
             <ReservasView
               reservations={reservations}
               rooms={rooms}
@@ -2250,7 +2253,7 @@ export default function App() {
 
       {/* Bottom Fixed Navigation Menu */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-900 shadow-2xl pb-safe">
-        <div className="max-w-4xl mx-auto grid grid-cols-8 gap-0.5 px-1 py-1 sm:py-1.5">
+        <div className="max-w-4xl mx-auto grid grid-cols-7 gap-0.5 px-1 py-1 sm:py-1.5">
           
           <button
             onClick={() => handleTabChange('inicio')}
@@ -2310,16 +2313,6 @@ export default function App() {
           >
             <Users className="h-4 w-4" />
             <span className="text-[8px] sm:text-[9px] mt-1 truncate">Client.</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('reservas')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
-              activeTab === 'reservas' ? 'bg-slate-950 text-emerald-400 font-bold' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            <span className="text-[8px] sm:text-[9px] mt-1 truncate">Reserv.</span>
           </button>
 
           <button
