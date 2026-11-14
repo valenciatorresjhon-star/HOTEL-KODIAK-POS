@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "rules": "config/firestore.staging.rules"
+    "rules": "firestore.staging.rules"
   },
   "emulators": {
     "auth": {

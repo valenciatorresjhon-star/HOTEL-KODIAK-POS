@@ -1,3 +1,4 @@
+import { verifyCurrentPassword } from '../services/authorization';
 import React, { useState } from 'react';
 import { Calendar, Plus, Clock, User, Bed, ShieldAlert, CheckCircle, RefreshCw, ClipboardList, X, Search } from 'lucide-react';
 import { Reservation, Room, ReservationStatus, Client, VehicleType } from '../types';
@@ -1025,8 +1026,8 @@ export const ReservasView: React.FC<ReservasProps> = ({
         open={showAdminModal}
         title="Autorización administrativa"
         message={adminModalMsg}
-        onConfirm={(password) => {
-          if (password === '4321') {
+        onConfirm={async (password) => {
+          if (await verifyCurrentPassword(password, true)) {
             setShowAdminModal(false);
             if (adminModalCallback) {
               adminModalCallback();

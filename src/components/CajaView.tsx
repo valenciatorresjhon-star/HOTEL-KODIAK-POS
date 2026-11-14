@@ -1,3 +1,4 @@
+import { verifyCurrentPassword } from '../services/authorization';
 import React, { useState } from 'react';
 import { Coins, Plus, TrendingUp, TrendingDown, ClipboardList, Wallet, FileText, Check, X, Unlock } from 'lucide-react';
 import { Shift, Sale, Expense, PaymentMethod } from '../types';
@@ -90,8 +91,8 @@ export const CajaView: React.FC<CajaProps> = ({
       return;
     }
 
-    const pin = window.prompt("Ingrese el PIN administrativo para abrir el cajón monedero (4321):");
-    if (pin !== "4321") {
+    const pin = window.prompt("Ingrese la contraseña de su cuenta para abrir el cajón monedero:");
+    if (!(await verifyCurrentPassword(pin || ''))) {
       window.alert("PIN administrativo incorrecto. Operación cancelada.");
       return;
     }

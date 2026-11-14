@@ -26,7 +26,7 @@ import { Sale, Expense, ShiftClosure } from '../types';
 import { formatCop, getTodayColombia, safeGetLocalStorage } from '../utils/storage';
 import { db } from '../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
-import * as XLSX from 'xlsx';
+
 
 interface DashboardProps {
   sales: Sale[];
@@ -181,7 +181,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
   const [hoveredWeekDay, setHoveredWeekDay] = useState<any | null>(null);
   const [weekTooltipPos, setWeekTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
       const rows = filteredClosures.map((closure) => {
         const cierreDate = closure.closedAt || closure.createdAt || closure.fecha || closure.fechaCierre;
@@ -214,6 +214,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
         };
       });
 
+      const XLSX = await import('xlsx');
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Cierres");
@@ -225,7 +226,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
     }
   };
 
-  const handleExportSingleClosureToExcel = (closure: any) => {
+  const handleExportSingleClosureToExcel = async (closure: any) => {
     try {
       const cierreDate = closure.closedAt || closure.createdAt || closure.fecha || closure.fechaCierre;
       const cerro = getEmployeeFullName(closure.empleadaEntrega || closure.employeeName || closure.createdByEmail);
@@ -267,6 +268,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
         });
       }
 
+      const XLSX = await import('xlsx');
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Detalle Cierre");

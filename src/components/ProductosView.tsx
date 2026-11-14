@@ -1,3 +1,4 @@
+import { verifyCurrentPassword } from '../services/authorization';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Package, Plus, ShoppingCart, ShieldAlert, ArrowDown, ListFilter, Trash2, Edit3, CheckCircle, RefreshCw, X, Printer, FileText, Zap, Sparkles, AlertCircle } from 'lucide-react';
 import { Product, Sale, Shift, PaymentMethod, FirebaseUser, getEmployeeFullName, OFFICIAL_KODIAK_PRODUCTS, getCanonicalProductName, matchOfficialProduct, isProductVisible, isProductArchivedOrHidden } from '../types';
@@ -127,9 +128,9 @@ export const ProductosView: React.FC<ProductosProps> = ({
     setAdminModalOpen(true);
   };
 
-  const confirmAdminPassword = (password: string): boolean => {
-    const cleanPassword = String(password || '').trim().toUpperCase();
-    if (cleanPassword !== '4321' && cleanPassword !== 'ADMIN4321') {
+  const confirmAdminPassword = async (password: string): Promise<boolean> => {
+
+    if (!(await verifyCurrentPassword(password, true))) {
       return false;
     }
     setAdminModalOpen(false);

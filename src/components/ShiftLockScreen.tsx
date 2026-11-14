@@ -1,3 +1,4 @@
+import { verifyCurrentPassword } from '../services/authorization';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Sparkles, Coins, Clipboard, UserCheck, Unlock, ArrowRightLeft, AlertTriangle, CheckCircle } from 'lucide-react';
 import { ALLOWED_EMPLOYEES, Shift, ShiftClosure, getEmployeeProfile, getEmployeeFullName } from '../types';
@@ -125,13 +126,17 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       return false;
     }
     if (!password.trim()) {
-      setError('Por favor ingrese su clave o PIN de turno.');
+      setError('Por favor ingrese su contraseña de su cuenta.');
       return false;
     }
     return true;
   };
 
   const handleInitialCashDrawer = async () => {
+    if (!(await verifyCurrentPassword(password))) {
+      setError('La contraseña de la cuenta no es válida.');
+      return;
+    }
     if (!validateOpeningBasics()) return;
 
     const emp = ALLOWED_EMPLOYEES.find((x) => x.id === selectedEmployee)!;
@@ -172,7 +177,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
     }
   };
 
-  const handleOpen = (e: React.FormEvent) => {
+  const handleOpen = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateOpeningBasics()) return;
 
@@ -211,6 +216,10 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       observacionDiferenciaBase: undefined
     };
 
+    if (!(await verifyCurrentPassword(password))) {
+      setError('La contraseña de la cuenta no es válida.');
+      return;
+    }
     onOpenShift(newShift);
   };
 

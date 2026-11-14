@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator, Auth } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator, Firestore } from 'firebase/firestore';
 
 export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
@@ -20,15 +20,28 @@ export const isFirebaseConfigured: boolean = Boolean(
   firebaseConfig.projectId !== ''
 );
 
+const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+if (useEmulators && !firebaseConfig.projectId.startsWith('demo-')) {
+  throw new Error('Las pruebas locales requieren un proyecto demo- sin recursos reales.');
+}
+if (import.meta.env.MODE === 'staging' && !useEmulators) {
+  throw new Error('La configuración staging local requiere emuladores.');
+}
+
 let appInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 
 if (isFirebaseConfigured) {
   try {
-    appInstance = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    appInstance = getApps().some(app => app.name === '[DEFAULT]') ? getApp() : initializeApp(firebaseConfig);
     authInstance = getAuth(appInstance);
     dbInstance = getFirestore(appInstance);
+    if (useEmulators) {
+      const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || '127.0.0.1';
+      connectAuthEmulator(authInstance, 'http://' + host + ':9099', { disableWarnings: true });
+      connectFirestoreEmulator(dbInstance, host, 8080);
+    }
   } catch (error) {
     console.warn('[Firebase] Error initializing Firebase:', error);
   }

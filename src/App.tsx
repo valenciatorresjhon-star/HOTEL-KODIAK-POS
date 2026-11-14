@@ -1,3 +1,4 @@
+import { verifyCurrentPassword } from './services/authorization';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Home, 
@@ -311,29 +312,8 @@ function isSameActiveShiftOperator(activeShift: Shift | null, userProfile: Fireb
 
 
 function isAdminAccessProfile(userProfile: FirebaseUser | null, firebaseUser: any): boolean {
-  const role = normalizeEmployeeMatchValue((userProfile as any)?.rol || '');
-  const email = normalizeEmployeeMatchValue(
-    (userProfile as any)?.email ||
-    (userProfile as any)?.correo ||
-    firebaseUser?.email ||
-    ''
-  );
-  const name = normalizeEmployeeMatchValue(
-    (userProfile as any)?.nombre ||
-    (userProfile as any)?.nombreCompleto ||
-    firebaseUser?.displayName ||
-    ''
-  );
-
-  return (
-    role === 'admin' ||
-    role === 'administrador' ||
-    email === 'adminhotelkodiakcom' ||
-    name.includes('administrador')
-  );
+  return userProfile?.activo === true && userProfile.rol === 'admin' && userProfile.uid === firebaseUser?.uid;
 }
-
-
 // --- ALERTAS Y REPORTE DIARIO CENTRALIZADO ---
 function getMoneySafe(value: any): number {
   const n = Number(value || 0);
@@ -1113,8 +1093,8 @@ export default function App() {
     setAdminModalOpen(true);
   };
 
-  const confirmAdminPassword = (password: string): boolean => {
-    if (password !== '4321') {
+  const confirmAdminPassword = async (password: string): Promise<boolean> => {
+    if (!(await verifyCurrentPassword(password, true))) {
       return false;
     }
     setAdminModalOpen(false);
