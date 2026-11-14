@@ -1,0 +1,117 @@
+// SOLO PARA FIREBASE DE PRUEBAS. NO PUBLICAR EN PRODUCCION SIN VALIDACION.
+// Asignar usuarios y roles mediante un proceso administrativo confiable (Admin SDK).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/hotel_users/$(request.auth.uid);
+    }
+
+    function authorized() {
+      return signedIn()
+        && exists(userPath())
+        && get(userPath()).data.activo == true
+        && get(userPath()).data.rol in ['admin', 'recepcionista', 'visor'];
+    }
+
+    function admin() {
+      return authorized() && get(userPath()).data.rol == 'admin';
+    }
+
+    function operator() {
+      return authorized() && get(userPath()).data.rol in ['admin', 'recepcionista'];
+    }
+
+    // Un usuario nunca puede otorgarse a si mismo el rol admin o visor.
+    // Altas/bajas de usuarios: administrador o Admin SDK en un servidor confiable.
+    match /hotel_users/{uid} {
+      allow get: if admin() || (signedIn() && uid == request.auth.uid);
+      allow list: if admin();
+      allow create, update, delete: if admin();
+    }
+
+    match /hotel_settings/{id} {
+      allow read: if authorized();
+      allow create, update, delete: if admin();
+    }
+
+    match /hotel_rooms/{id} {
+      allow read: if authorized();
+      allow create, update: if operator();
+      allow delete: if admin();
+    }
+
+    match /hotel_clients/{id} {
+      allow read: if authorized();
+      allow create, update: if operator();
+      allow delete: if admin();
+    }
+
+    match /hotel_products/{id} {
+      allow read: if authorized();
+      allow create, update: if operator();
+      allow delete: if admin();
+    }
+
+    match /hotel_sales/{id} {
+      allow read: if authorized();
+      allow create: if operator();
+      allow update, delete: if admin();
+    }
+
+    match /hotel_expenses/{id} {
+      allow read: if authorized();
+      allow create: if operator();
+      allow update, delete: if admin();
+    }
+
+    match /hotel_shifts/{id} {
+      allow read: if authorized();
+      allow create, update: if operator();
+      allow delete: if admin();
+    }
+
+    match /hotel_shift_closures/{id} {
+      allow read: if authorized();
+      allow create: if operator();
+      allow update, delete: if admin();
+    }
+
+    match /hotel_reservations/{id} {
+      allow read: if authorized();
+      allow create, update: if operator();
+      allow delete: if admin();
+    }
+
+    // Registros operativos auxiliares.
+    match /{collectionId}/{documentId} {
+      allow read: if authorized() && collectionId in [
+        'hotel_movements', 'hotel_inventory_movements', 'hotel_stock_movements',
+        'hotel_stock_alerts', 'hotel_audit_logs', 'hotel_extra_hours',
+        'hotel_checkout_events', 'hotel_cash_drawer_logs',
+        'hotel_printer_errors', 'hotel_printer_logs'
+      ];
+      allow create: if operator() && collectionId in [
+        'hotel_movements', 'hotel_inventory_movements', 'hotel_stock_movements',
+        'hotel_stock_alerts', 'hotel_audit_logs', 'hotel_extra_hours',
+        'hotel_checkout_events', 'hotel_cash_drawer_logs',
+        'hotel_printer_errors', 'hotel_printer_logs'
+      ];
+      allow update, delete: if admin() && collectionId in [
+        'hotel_movements', 'hotel_inventory_movements', 'hotel_stock_movements',
+        'hotel_stock_alerts', 'hotel_audit_logs', 'hotel_extra_hours',
+        'hotel_checkout_events', 'hotel_cash_drawer_logs',
+        'hotel_printer_errors', 'hotel_printer_logs'
+      ];
+    }
+
+    // El resto del contenido se rechaza expresamente.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

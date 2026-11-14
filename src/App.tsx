@@ -45,7 +45,6 @@ import { buildOfficialRoomsFromExisting, hydrateOfficialRoom, KODIAK_OFFICIAL_RO
 import { auth, isFirebaseConfigured } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { LoginView } from './components/LoginView';
-import { OwnerMobileView } from './components/OwnerMobileView';
 import { 
   subscribeToCollection,
   saveRoomToFirestore,
@@ -79,6 +78,9 @@ import {
   printExpenseReceipt,
   getSettings
 } from './services/printerService';
+
+// El panel del propietario se descarga solo cuando ingresa su perfil.
+const OwnerMobileView = React.lazy(() => import('./components/OwnerMobileView').then((module) => ({ default: module.OwnerMobileView })));
 
 type TabType = 'inicio' | 'habitaciones' | 'productos' | 'caja' | 'dashboard' | 'clientes' | 'reservas' | 'cierre';
 
@@ -458,7 +460,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     scope: activeShiftId ? 'turno activo' : 'día',
     activeShiftId: activeShiftId || '',
     empleadoTurno: activeShift?.empleada || '',
-    baseInicial: 0,
+    baseInicial: Number(activeShift?.baseInicial || 0),
     ventasHabitaciones,
     ventasProductos,
     reservasAbonos,
@@ -469,7 +471,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     gastosEfectivo,
     gastosTransferencia,
     totalGastos,
-    cajaEsperada: efectivo - gastosEfectivo,
+    cajaEsperada: Number(activeShift?.baseInicial || 0) + efectivo - gastosEfectivo,
     habitacionesOcupadas: ocupadas,
     habitacionesDisponibles: disponibles,
     productosStockBajo: stockBajo,
@@ -913,7 +915,9 @@ export default function App() {
         }
       } else {
         // Mezclar Firestore con respaldo local: gana la versión con updatedAt más reciente.
-        let currentRooms = mergeFirestoreRoomsWithLocalBackup(cloudItems);
+        let currentRooms = userProfile?.rol === 'visor'
+          ? cloudItems // El visor remoto recibe la versión autorizada de Firebase, sin sobrescritura de caché local.
+          : mergeFirestoreRoomsWithLocalBackup(cloudItems);
 
         // Catálogo oficial Hotel Kodiak: se muestran solo 17 habitaciones oficiales.
         // No se borran documentos viejos ni históricos: las duplicadas simplemente no se usan en pantalla.
@@ -988,7 +992,7 @@ export default function App() {
         return s;
       });
 
-      if (hasLegacyBase) {
+      if (hasLegacyBase && userProfile?.rol !== 'visor') {
         sanitizedItems.forEach((s) => {
           if (s.estado === 'abierto') {
             saveShiftToFirestore(s).catch((err) => console.warn("Error guardando turno con base inicial 0:", err));
@@ -1159,17 +1163,19 @@ export default function App() {
   // Update handlers pushing directly to Firebase
   const handleOpenShift = async (newShift: Shift) => {
     setOnlineStatus('syncing');
-    // Segunda protección en el guardado: ninguna apertura nueva hereda efectivo.
+    // La base se declara mediante conteo físico; no sumar el último cierre.
     // No se modifican turnos existentes ni cierres históricos.
-    const shiftWithZeroBase: Shift = {
+    const cashCounted = Number(newShift.baseInicial);
+    if (!Number.isFinite(cashCounted) || cashCounted < 0) {
+      throw new Error('El efectivo inicial debe ser un valor válido mayor o igual a cero.');
+    }
+    const shiftWithCountedBase: Shift = {
       ...newShift,
-      baseInicial: 0,
-      baseConfirmadaApertura: 0,
-      diferenciaBaseVsCierreAnterior: 0,
-      aperturaConDiferencia: false
+      baseInicial: cashCounted,
+      baseConfirmadaApertura: cashCounted
     };
-    await saveShiftToFirestore(shiftWithZeroBase);
-    setActiveShift(shiftWithZeroBase);
+    await saveShiftToFirestore(shiftWithCountedBase);
+    setActiveShift(shiftWithCountedBase);
     setActiveTab('inicio');
     setOnlineStatus('online');
   };
@@ -1355,7 +1361,8 @@ export default function App() {
       }
 
       // --- INTEGRATED PRINTER & DRAWER LOGIC AFTER SUCCESSFUL SALE ---
-      const autoPrint = hotelSettings?.autoPrintEnabled ?? true;
+      // Recibo automático solo para movimientos de venta pagados en efectivo.
+      const autoPrint = newSale.metodoPago === 'Efectivo' && Number(newSale.total) > 0;
       const autoOpen = hotelSettings?.autoOpenDrawer ?? true;
       const cashOnly = hotelSettings?.openDrawerCashOnly ?? true;
 
@@ -1514,7 +1521,9 @@ export default function App() {
 
       // 2. Trigger receipt printing
       try {
-        await printExpenseReceipt(newExpense, initialPrintWindow);
+        if (newExpense.metodoPago === 'Efectivo') {
+          await printExpenseReceipt(newExpense, initialPrintWindow);
+        }
       } catch (err: any) {
         console.error("Fallo impresión recibo de egreso:", err);
       }
@@ -1893,6 +1902,7 @@ export default function App() {
   if (userProfile.rol === 'visor') {
     return (
       <>
+        <React.Suspense fallback={<div role="status" style={{ padding: 24 }}>Cargando panel del propietario...</div>}>
         <OwnerMobileView
           rooms={rooms}
           clients={clients}
@@ -1909,6 +1919,7 @@ export default function App() {
           systemAlerts={systemAlerts}
           dailyReport={dailyReport}
         />
+        </React.Suspense>
         {renderGlobalModals()}
       </>
     );
@@ -2217,7 +2228,7 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'reservas' && (
+          {false && activeTab === 'reservas' && (
             <ReservasView
               reservations={reservations}
               rooms={rooms}
@@ -2244,7 +2255,7 @@ export default function App() {
 
       {/* Bottom Fixed Navigation Menu */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-900 shadow-2xl pb-safe">
-        <div className="max-w-4xl mx-auto grid grid-cols-8 gap-0.5 px-1 py-1 sm:py-1.5">
+        <div className="max-w-4xl mx-auto grid grid-cols-7 gap-0.5 px-1 py-1 sm:py-1.5">
           
           <button
             onClick={() => handleTabChange('inicio')}
@@ -2304,16 +2315,6 @@ export default function App() {
           >
             <Users className="h-4 w-4" />
             <span className="text-[8px] sm:text-[9px] mt-1 truncate">Client.</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('reservas')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
-              activeTab === 'reservas' ? 'bg-slate-950 text-emerald-400 font-bold' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            <span className="text-[8px] sm:text-[9px] mt-1 truncate">Reserv.</span>
           </button>
 
           <button

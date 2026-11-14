@@ -659,7 +659,7 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
 
     // Pre-open print window for occupying room
     const settings = getSettings();
-    if (settings.printerType === 'browser' && settings.autoPrintEnabled) {
+    if (metodoPago === 'Efectivo' && settings.printerType === 'browser' && settings.autoPrintEnabled) {
       if (hotelSettings?.printOnRoomCharge ?? true) {
         const win = openBrowserPrintWindow();
         setBrowserPrintWindow(win);
@@ -997,7 +997,7 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
 
     // Prompt for print option
     setShowOcuparModal(false);
-    setShowReceipt(true);
+    setShowReceipt(metodoPago === 'Efectivo');
   };
 
   const executeReleaseRoom = async (

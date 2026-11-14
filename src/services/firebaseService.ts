@@ -260,7 +260,8 @@ function normalizeProductCollectionForStorage<T = any>(collectionName: string, i
 
   for (const rawItem of rawList) {
     if (!rawItem) continue;
-    const canonical = getCanonicalProductName(rawItem.nombre || rawItem.name);
+    const candidate = rawItem as any;
+    const canonical = getCanonicalProductName(candidate.nombre || candidate.name);
     if (!canonical) continue;
     const item = forceArchiveProductIfHidden({ ...rawItem, nombre: canonical });
     const existing = byCanonical.get(canonical);
@@ -541,6 +542,11 @@ async function writeFirestoreSet(collectionName: string, docId: string, data: an
 }
 
 export async function syncPendingOperationsToFirestore(): Promise<{ success: boolean; remaining: number }> {
+  // No reenviar datos en un acceso de consulta o con un perfil no autenticado.
+  // La cola de operaciones sigue almacenada, pero no se transmite a Firebase.
+  if (!cachedUserProfile || cachedUserProfile.rol === 'visor' || auth?.currentUser?.uid !== cachedUserProfile.uid) {
+    return { success: false, remaining: loadPendingSync().length };
+  }
   if (!isFirebaseConfigured || !hasBrowserStorage()) {
     return { success: false, remaining: loadPendingSync().length };
   }
@@ -1117,9 +1123,11 @@ export const subscribeToCollection = <T>(
 
       callback(consolidated as T[]);
 
-      syncPendingOperationsToFirestore().catch((error) => {
+      if (cachedUserProfile?.rol !== 'visor') {
+        syncPendingOperationsToFirestore().catch((error) => {
         console.warn("No se pudo sincronizar pendientes después de recibir snapshot:", error);
-      });
+        });
+      }
 
       return;
     }
@@ -1147,7 +1155,9 @@ export const subscribeToCollection = <T>(
       return;
     }
 
-    const merged = mergeCollectionsPreferNewest(collectionName, normalizedRemoteItems);
+    const merged = cachedUserProfile?.rol === 'visor'
+      ? normalizedRemoteItems // El estado del propietario proviene de Firestore, no del caché del navegador.
+      : mergeCollectionsPreferNewest(collectionName, normalizedRemoteItems);
 
     if (orderField) {
       merged.sort((a: any, b: any) => {
@@ -1162,9 +1172,11 @@ export const subscribeToCollection = <T>(
     callback(merged as T[]);
 
     // Si hay pendientes, intentamos sincronizar sin bloquear la pantalla.
-    syncPendingOperationsToFirestore().catch((error) => {
+    if (cachedUserProfile?.rol !== 'visor') {
+      syncPendingOperationsToFirestore().catch((error) => {
       console.warn("No se pudo sincronizar pendientes después de recibir snapshot:", error);
-    });
+      });
+    }
   }, (error) => {
     logFirestoreError('read', collectionName, 'query', error, 'firebaseService.ts');
 
