@@ -460,7 +460,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     scope: activeShiftId ? 'turno activo' : 'día',
     activeShiftId: activeShiftId || '',
     empleadoTurno: activeShift?.empleada || '',
-    baseInicial: 0,
+    baseInicial: Number(activeShift?.baseInicial || 0),
     ventasHabitaciones,
     ventasProductos,
     reservasAbonos,
@@ -471,7 +471,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     gastosEfectivo,
     gastosTransferencia,
     totalGastos,
-    cajaEsperada: efectivo - gastosEfectivo,
+    cajaEsperada: Number(activeShift?.baseInicial || 0) + efectivo - gastosEfectivo,
     habitacionesOcupadas: ocupadas,
     habitacionesDisponibles: disponibles,
     productosStockBajo: stockBajo,
@@ -1163,17 +1163,19 @@ export default function App() {
   // Update handlers pushing directly to Firebase
   const handleOpenShift = async (newShift: Shift) => {
     setOnlineStatus('syncing');
-    // Segunda protección en el guardado: ninguna apertura nueva hereda efectivo.
+    // La base se declara mediante conteo físico; no sumar el último cierre.
     // No se modifican turnos existentes ni cierres históricos.
-    const shiftWithZeroBase: Shift = {
+    const cashCounted = Number(newShift.baseInicial);
+    if (!Number.isFinite(cashCounted) || cashCounted < 0) {
+      throw new Error('El efectivo inicial debe ser un valor válido mayor o igual a cero.');
+    }
+    const shiftWithCountedBase: Shift = {
       ...newShift,
-      baseInicial: 0,
-      baseConfirmadaApertura: 0,
-      diferenciaBaseVsCierreAnterior: 0,
-      aperturaConDiferencia: false
+      baseInicial: cashCounted,
+      baseConfirmadaApertura: cashCounted
     };
-    await saveShiftToFirestore(shiftWithZeroBase);
-    setActiveShift(shiftWithZeroBase);
+    await saveShiftToFirestore(shiftWithCountedBase);
+    setActiveShift(shiftWithCountedBase);
     setActiveTab('inicio');
     setOnlineStatus('online');
   };

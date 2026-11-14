@@ -59,10 +59,9 @@ export const CajaView: React.FC<CajaProps> = ({
   const totalExpensesTransfer = currentShiftExpenses.filter((e) => (e.metodoPago || '').toLowerCase() === 'transferencia').reduce((sum, e) => sum + Number(e.valor || 0), 0);
   const totalExpenses = totalExpensesCash + totalExpensesTransfer;
 
-  // Base operativa siempre 0, incluso si un turno viejo traía un valor heredado.
-  // No reescribir aquí el registro histórico de Firestore.
-  const baseInicial = 0;
-  const expectedCashInBox = totalSalesCash - totalExpensesCash;
+  // El efectivo contado al abrir se incorpora una sola vez en este turno.
+  const baseInicial = Number(activeShift.baseInicial || 0);
+  const expectedCashInBox = baseInicial + totalSalesCash - totalExpensesCash;
   // Ajuste visual EXCLUSIVO del turno de PAOLA del 30/31 de octubre de 2026:
   // el propietario confirmó $60.000 disponibles antes del egreso de $30.000.
   // No crear ventas, movimientos de efectivo ni alterar los datos de Firebase.

@@ -137,7 +137,7 @@ export const CierreTurnoView: React.FC<CierreProps> = ({
   const inventoryDiscount = shortageInfo.total;
   const authorizedPayroll = Math.max(0, payrollAmount + productCommission - inventoryDiscount);
   // Aplicar base contable cero a los cierres nuevos sin alterar cierres ya guardados.
-  const baseInicial = 0;
+  const baseInicial = Number(activeShift.baseInicial || 0);
   const cashBeforePayroll = baseInicial + salesCash - expensesCash;
   const cashShouldRemain = cashBeforePayroll - authorizedPayroll;
   const finalCashDifference = moneyLeftInBox - cashShouldRemain;
