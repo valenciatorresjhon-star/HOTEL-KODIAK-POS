@@ -1,3 +1,4 @@
+import { verifyCurrentPassword } from '../services/authorization';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Sparkles, Coins, Clipboard, UserCheck, Unlock, ArrowRightLeft, AlertTriangle, CheckCircle } from 'lucide-react';
 import { ALLOWED_EMPLOYEES, Shift, ShiftClosure, getEmployeeProfile, getEmployeeFullName } from '../types';
@@ -91,12 +92,12 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
   const [openingDrawer, setOpeningDrawer] = useState<boolean>(false);
 
   const suggestedBaseFromClosure = useMemo(() => getClosureSuggestedBase(lastClosure), [lastClosure?.id, lastClosure?.dineroDejadoEnCaja]);
-  // Regla permanente: cada turno nuevo inicia con base contable $0.
-  // El efectivo del cierre anterior se conserva solo como dato histórico.
-  const baseCash = 0;
+  // La base inicial corresponde al efectivo realmente contado por la empleada.
+  // El cierre anterior es referencia, nunca se suma automáticamente.
+  const baseCash = parseMoneyInput(baseCashInput);
   const hasPreviousClosure = !!lastClosure;
-  const baseDifference = 0;
-  const openingWithDifferentBase = false;
+  const baseDifference = baseCash - suggestedBaseFromClosure;
+  const openingWithDifferentBase = hasPreviousClosure && baseDifference !== 0;
 
   useEffect(() => {
     if (!lastClosure) {
@@ -125,13 +126,17 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       return false;
     }
     if (!password.trim()) {
-      setError('Por favor ingrese su clave o PIN de turno.');
+      setError('Por favor ingrese su contraseña de su cuenta.');
       return false;
     }
     return true;
   };
 
   const handleInitialCashDrawer = async () => {
+    if (!(await verifyCurrentPassword(password))) {
+      setError('La contraseña de la cuenta no es válida.');
+      return;
+    }
     if (!validateOpeningBasics()) return;
 
     const emp = ALLOWED_EMPLOYEES.find((x) => x.id === selectedEmployee)!;
@@ -159,9 +164,9 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
         cierreAnteriorHora: lastClosure?.horaCierre || '',
         cierreAnteriorCajaQueDebiaQuedar: Number(lastClosure?.cajaQueDebeQuedar || 0),
         cierreAnteriorDineroDejado: Number(lastClosure?.dineroDejadoEnCaja || 0),
-        baseSugeridaCierreAnterior: 0,
-        diferenciaBaseVsCierreAnterior: 0,
-        aperturaConDiferencia: false
+        baseSugeridaCierreAnterior: suggestedBaseFromClosure,
+        diferenciaBaseVsCierreAnterior: baseDifference,
+        aperturaConDiferencia: openingWithDifferentBase
       }, win);
       setInitialDrawerOpened(true);
       window.alert('Caja abierta para conteo inicial. Cuente la base y luego registre el turno.');
@@ -172,7 +177,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
     }
   };
 
-  const handleOpen = (e: React.FormEvent) => {
+  const handleOpen = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateOpeningBasics()) return;
 
@@ -204,13 +209,17 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
       cierreAnteriorHoraCierre: lastClosure?.horaCierre || undefined,
       cierreAnteriorCajaQueDebiaQuedar: lastClosure?.cajaQueDebeQuedar,
       cierreAnteriorDineroDejado: lastClosure?.dineroDejadoEnCaja,
-      baseSugeridaCierreAnterior: 0,
-      baseConfirmadaApertura: 0,
-      diferenciaBaseVsCierreAnterior: 0,
-      aperturaConDiferencia: false,
+      baseSugeridaCierreAnterior: suggestedBaseFromClosure,
+      baseConfirmadaApertura: baseCash,
+      diferenciaBaseVsCierreAnterior: baseDifference,
+      aperturaConDiferencia: openingWithDifferentBase,
       observacionDiferenciaBase: undefined
     };
 
+    if (!(await verifyCurrentPassword(password))) {
+      setError('La contraseña de la cuenta no es válida.');
+      return;
+    }
     onOpenShift(newShift);
   };
 
@@ -361,12 +370,13 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
               type="text"
               inputMode="numeric"
               value={baseCashInput}
-              readOnly
-              aria-label="Base inicial fija en cero"
-              className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2 text-sm text-white font-mono cursor-not-allowed"
+              onChange={(e) => setBaseCashInput(formatMoneyInput(e.target.value))}
+              required
+              aria-label="Efectivo inicial contado"
+              className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2 text-sm text-white font-mono"
             />
             <span className="text-[10px] text-emerald-400 block">
-              Base fija: $0. {hasPreviousClosure ? `Último cierre (solo consulta): ${moneyText(suggestedBaseFromClosure)}.` : 'Sin cierre anterior.'}
+              Declare cuánto dinero hay realmente en el cajón: {moneyText(baseCash)}. {hasPreviousClosure ? `El último cierre reportó ${moneyText(suggestedBaseFromClosure)} (solo referencia).` : 'Sin cierre anterior.'}
             </span>
           </div>
 
@@ -398,7 +408,7 @@ export const ShiftLockScreen: React.FC<ShiftLockProps> = ({ onOpenShift, lastClo
           {initialDrawerOpened && (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 p-3 text-[11px] font-bold flex gap-2">
               <CheckCircle className="h-4 w-4 flex-shrink-0" />
-              <span>Caja abierta. La base del nuevo turno es $0; los movimientos se contarán desde cero.</span>
+              <span>Caja abierta. Registre la base realmente contada; las ventas en efectivo se sumarán y los egresos se restarán.</span>
             </div>
           )}
 

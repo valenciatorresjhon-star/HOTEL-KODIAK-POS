@@ -5,7 +5,7 @@ interface AdminPasswordModalProps {
   open: boolean;
   title?: string;
   message?: string;
-  onConfirm: (password: string) => boolean;
+  onConfirm: (password: string) => boolean | Promise<boolean>;
   onCancel: () => void;
 }
 
@@ -19,14 +19,19 @@ export function AdminPasswordModal({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const isCorrect = onConfirm(password);
+    if (checking) return;
+    setChecking(true);
+    let isCorrect = false;
+    try { isCorrect = await onConfirm(password); } catch { isCorrect = false; }
+    setChecking(false);
     if (isCorrect) {
       setPassword('');
       setError('');

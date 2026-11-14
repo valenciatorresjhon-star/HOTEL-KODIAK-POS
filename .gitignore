@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+tests/service.generated.mjs
+tests/results.json
+
+!.env.staging.example
+
+tests/catalog.generated.mjs

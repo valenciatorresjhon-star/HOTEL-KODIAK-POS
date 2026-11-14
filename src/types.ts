@@ -524,6 +524,16 @@ export const INITIAL_PRODUCTS_DATA: Product[] = OFFICIAL_KODIAK_PRODUCTS
   updatedAt: '2026-10-31T00:00:00-05:00'
 } as Product));
 
+export interface EmployeeProfile {
+  id: string;
+  name: string;
+  nombreCompleto: string;
+  fechaNacimiento: string;
+  fechaNacimientoTexto: string;
+  rol: UserRole;
+  activo: boolean;
+}
+
 export const ALLOWED_EMPLOYEES: EmployeeProfile[] = [
   {
     id: 'ALICIA',
