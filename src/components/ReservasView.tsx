@@ -1,3 +1,4 @@
+import { verifyAdminPassword } from '../services/adminVerification';
 import React, { useState } from 'react';
 import { Calendar, Plus, Clock, User, Bed, ShieldAlert, CheckCircle, RefreshCw, ClipboardList, X, Search } from 'lucide-react';
 import { Reservation, Room, ReservationStatus, Client, VehicleType } from '../types';
@@ -1025,8 +1026,8 @@ export const ReservasView: React.FC<ReservasProps> = ({
         open={showAdminModal}
         title="Autorización administrativa"
         message={adminModalMsg}
-        onConfirm={(password) => {
-          if (password === '4321') {
+        onConfirm={async (password) => {
+          if (await verifyAdminPassword(password)) {
             setShowAdminModal(false);
             if (adminModalCallback) {
               adminModalCallback();
@@ -1044,3 +1045,4 @@ export const ReservasView: React.FC<ReservasProps> = ({
     </div>
   );
 };
+

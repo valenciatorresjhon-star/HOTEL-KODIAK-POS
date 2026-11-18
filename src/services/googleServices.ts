@@ -22,7 +22,7 @@ export const googleCalendarService = {
     
     if (!isGoogleConfigured()) {
       console.warn('[Google Calendar Service] Google OAuth not fully configured. Using offline fallback.');
-      return { success: true, eventId: `offline-gcal-${reservation.id}` };
+      return { success: false };
     }
 
     try {
@@ -72,10 +72,7 @@ export const googleSheetsService = {
 
     if (!isGoogleConfigured()) {
       console.warn('[Google Sheets Service] Google OAuth not configured. Prepping simulation URL.');
-      return { 
-        success: true, 
-        url: 'https://docs.google.com/spreadsheets/d/1_HotelKodiakPOS_placeholder/edit' 
-      };
+      return { success: false };
     }
 
     try {
@@ -102,7 +99,7 @@ export const googleDriveService = {
 
     if (!isGoogleConfigured()) {
       console.warn('[Google Drive Service] Google Drive integration pending. Backup saved locally.');
-      return { success: true, fileId: `offline-gdrive-file-${Date.now()}` };
+      return { success: false };
     }
 
     try {
@@ -127,10 +124,7 @@ export const gmailService = {
   async sendClosureEmail(recipientEmail: string, closure: ShiftClosure): Promise<boolean> {
     console.log('[Gmail Service] Sending shift closure report to:', recipientEmail);
 
-    if (!isGoogleConfigured()) {
-      console.warn('[Gmail Service] Gmail integration pending. Report generated offline.');
-      return true;
-    }
+    if (!isGoogleConfigured()) return false;
 
     try {
       const response = await fetch('/api/google/gmail/send-closure', {
@@ -151,9 +145,7 @@ export const gmailService = {
   async sendConfirmationEmail(recipientEmail: string, subject: string, htmlContent: string): Promise<boolean> {
     console.log('[Gmail Service] Sending confirmation email to:', recipientEmail);
 
-    if (!isGoogleConfigured()) {
-      return true;
-    }
+    if (!isGoogleConfigured()) return false;
 
     try {
       const response = await fetch('/api/google/gmail/send', {
@@ -168,3 +160,4 @@ export const gmailService = {
     }
   }
 };
+

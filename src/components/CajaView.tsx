@@ -1,3 +1,5 @@
+import { AdminPasswordModal } from './AdminPasswordModal';
+import { verifyAdminPassword } from '../services/adminVerification';
 import React, { useState } from 'react';
 import { Coins, Plus, TrendingUp, TrendingDown, ClipboardList, Wallet, FileText, Check, X, Unlock } from 'lucide-react';
 import { Shift, Sale, Expense, PaymentMethod } from '../types';
@@ -83,19 +85,16 @@ export const CajaView: React.FC<CajaProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
 
+  const [drawerAuthOpen, setDrawerAuthOpen] = useState(false);
+
   const handleManualOpenDrawer = async () => {
     // Only visible/executable for admin and recepcionista
     const userRole = userProfile?.rol;
-    if (userRole !== 'admin' && userRole !== 'recepcionista') {
+    if (userRole !== 'admin') {
       window.alert("No tiene permisos para abrir el cajón monedero.");
       return;
     }
 
-    const pin = window.prompt("Ingrese el PIN administrativo para abrir el cajón monedero (4321):");
-    if (pin !== "4321") {
-      window.alert("PIN administrativo incorrecto. Operación cancelada.");
-      return;
-    }
 
     const reason = window.prompt("Ingrese el motivo de la apertura manual:", "Ajuste de caja / Dar cambio");
     if (reason === null) return; // Cancelled
@@ -190,6 +189,12 @@ export const CajaView: React.FC<CajaProps> = ({
 
   return (
     <div className="space-y-6">
+      <AdminPasswordModal open={drawerAuthOpen} onCancel={() => setDrawerAuthOpen(false)} onConfirm={async password => {
+        if (!(await verifyAdminPassword(password))) return false;
+        setDrawerAuthOpen(false);
+        await handleManualOpenDrawer();
+        return true;
+      }} />
       
       {/* Action Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-900 pb-4">
@@ -205,7 +210,7 @@ export const CajaView: React.FC<CajaProps> = ({
           {/* MANUAL CASH DRAWER OPEN ACTION */}
           {(userProfile?.rol === 'admin' || userProfile?.rol === 'recepcionista') && (
             <button
-              onClick={handleManualOpenDrawer}
+              onClick={() => setDrawerAuthOpen(true)}
               className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-[0.98] transition-all"
             >
               <Unlock className="h-4 w-4" />

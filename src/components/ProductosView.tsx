@@ -1,3 +1,4 @@
+import { verifyAdminPassword } from '../services/adminVerification';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Package, Plus, ShoppingCart, ShieldAlert, ArrowDown, ListFilter, Trash2, Edit3, CheckCircle, RefreshCw, X, Printer, FileText, Zap, Sparkles, AlertCircle } from 'lucide-react';
 import { Product, Sale, Shift, PaymentMethod, FirebaseUser, getEmployeeFullName, OFFICIAL_KODIAK_PRODUCTS, getCanonicalProductName, matchOfficialProduct, isProductVisible, isProductArchivedOrHidden } from '../types';
@@ -6,6 +7,7 @@ import { AdminPasswordModal } from './AdminPasswordModal';
 import { auth } from '../firebase';
 import { getPrinterStatus, printReceipt, openCashDrawer as realOpenCashDrawer, getSettings, openBrowserPrintWindow, setBrowserPrintWindow } from '../services/printerService';
 import { archiveProductToFirestore } from '../services/firebaseService';
+import { PriceRecoveryPanel } from './PriceRecoveryPanel';
 function normalizePaymentMethod(method: any): string {
   return String(method || "")
     .trim()
@@ -107,7 +109,7 @@ export const ProductosView: React.FC<ProductosProps> = ({
     for (const product of safeProducts) {
       if (!isProductVisible(product)) continue;
       const canonical = getCanonicalProductName(product.nombre);
-      if (!matchOfficialProduct(canonical)) continue;
+      // Conservar también productos nuevos reales del hotel.
       const existing = byName.get(canonical);
       if (!existing || ms(product) > ms(existing)) {
         byName.set(canonical, { ...product, nombre: canonical });
@@ -127,9 +129,8 @@ export const ProductosView: React.FC<ProductosProps> = ({
     setAdminModalOpen(true);
   };
 
-  const confirmAdminPassword = (password: string): boolean => {
-    const cleanPassword = String(password || '').trim().toUpperCase();
-    if (cleanPassword !== '4321' && cleanPassword !== 'ADMIN4321') {
+  const confirmAdminPassword = async (password: string): Promise<boolean> => {
+    if (!(await verifyAdminPassword(password))) {
       return false;
     }
     setAdminModalOpen(false);
@@ -883,6 +884,7 @@ export const ProductosView: React.FC<ProductosProps> = ({
         </div>
       )}
 
+      {userProfile?.rol === 'admin' && <PriceRecoveryPanel />}
       {/* Grid of stock cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {visibleProducts.map((p) => {

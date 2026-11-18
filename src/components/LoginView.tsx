@@ -39,7 +39,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
     setLoading(true);
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
+    const cleanPassword = password;
 
     if (!cleanEmail || !cleanPassword) {
       setError('Credenciales incorrectas. Verifique su correo y contraseña.');
@@ -204,3 +204,4 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
     </div>
   );
 }
+
