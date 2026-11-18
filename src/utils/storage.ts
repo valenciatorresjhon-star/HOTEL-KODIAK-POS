@@ -58,56 +58,7 @@ export const loadInitialRooms = (): Room[] => {
 
 export const loadInitialProducts = (): Product[] => {
   const stored = safeGetLocalStorage<Product[]>('hotel_products', []);
-  if (stored.length > 0) {
-    let hasChanges = false;
-    const map = new Map<string, Product>();
-
-    for (const item of stored) {
-      if (!item) continue;
-      const canonical = getCanonicalProductName(item.nombre || (item as any).name);
-      if (!canonical) continue;
-      const existing = map.get(canonical);
-      const itemStock = typeof item.stock === 'number' ? item.stock : 0;
-
-      if (!existing) {
-        map.set(canonical, {
-          ...item,
-          nombre: canonical,
-          stock: itemStock,
-          activo: item.activo !== false,
-          archivado: item.archivado === true
-        });
-      } else {
-        // Preservar stock real / mayor stock
-        if (itemStock > existing.stock) {
-          map.set(canonical, {
-            ...existing,
-            stock: itemStock,
-            updatedAt: item.updatedAt || existing.updatedAt
-          });
-          hasChanges = true;
-        }
-      }
-    }
-
-    // Asegurar que los 11 productos base existan si no están presentes, sin sobreescribir existencias
-    for (const initP of INITIAL_PRODUCTS_DATA) {
-      const canonical = getCanonicalProductName(initP.nombre);
-      if (!map.has(canonical)) {
-        map.set(canonical, { ...initP });
-        hasChanges = true;
-      }
-    }
-
-    const result = Array.from(map.values());
-    if (hasChanges) {
-      safeSetLocalStorage('hotel_products', result);
-    }
-    return result;
-  }
-
-  safeSetLocalStorage('hotel_products', INITIAL_PRODUCTS_DATA);
-  return INITIAL_PRODUCTS_DATA;
+  return Array.isArray(stored) ? stored.filter(Boolean) : [];
 };
 
 // Formatting helpers
@@ -204,4 +155,5 @@ export function parseColombiaDateTime(fechaStr?: string, horaStr?: string): Date
     return null;
   }
 }
+
 

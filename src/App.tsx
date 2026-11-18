@@ -1,3 +1,4 @@
+import { verifyAdminPassword } from './services/adminVerification';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Home, 
@@ -211,7 +212,7 @@ function normalizeProductsForKodiak(productList: Product[]): Product[] {
   for (const raw of list) {
     if (!raw) continue;
     const canonical = getCanonicalProductName(raw.nombre);
-    if (!OFFICIAL_ACTIVE_PRODUCT_NAMES.includes(canonical as any)) continue;
+    if (!canonical) continue;
     const item = { ...raw, nombre: canonical };
     const previous = selected.get(canonical);
     if (!previous) {
@@ -227,10 +228,7 @@ function normalizeProductsForKodiak(productList: Product[]): Product[] {
       selected.set(canonical, item);
     }
   }
-  return OFFICIAL_ACTIVE_PRODUCT_NAMES
-    .map((name) => selected.get(name))
-    .filter((item): item is Product => !!item)
-    .map(forceArchiveProductForKodiak);
+  return [...selected.values()];
 }
 
 function getVisibleProductsForKodiak(productList: Product[]): Product[] {
@@ -882,60 +880,10 @@ export default function App() {
 
       const cloudItems = Array.isArray(items) ? items : [];
 
-      if (cloudItems.length === 0) {
-        const cachedRooms = safeGetLocalStorage<Room[]>('hotel_rooms', []);
-
-        if (Array.isArray(cachedRooms) && cachedRooms.length > 0) {
-          const sortedCached = buildOfficialRoomsFromExisting(cachedRooms);
-          setRooms(sortedCached);
-          persistRoomsLocalBackup(sortedCached);
-
-          // Si Firestore aparece vacío pero hay respaldo local, se reintenta subirlo.
-          if (userProfile?.rol !== 'visor') {
-            sortedCached.forEach((room) => {
-              saveRoomToFirestore(room).catch((err) => {
-                console.warn('No se pudo restaurar habitación local en Firestore:', room?.id, err);
-              });
-            });
-          }
-        } else {
-          // Auto-seed rooms in firestore if completely empty
-          const initial = buildKodiakInitialRooms();
-          if (userProfile?.rol === 'admin') {
-            initial.forEach((r) => {
-              saveRoomToFirestore(r).catch((err) => {
-                console.warn('No se pudo crear habitación inicial en Firestore:', r?.id, err);
-              });
-            });
-          }
-          setRooms(initial);
-          persistRoomsLocalBackup(initial);
-        }
-      } else {
-        // Mezclar Firestore con respaldo local: gana la versión con updatedAt más reciente.
-        let currentRooms = mergeFirestoreRoomsWithLocalBackup(cloudItems);
-
-        // Catálogo oficial Hotel Kodiak: se muestran solo 17 habitaciones oficiales.
-        // No se borran documentos viejos ni históricos: las duplicadas simplemente no se usan en pantalla.
-        currentRooms = buildOfficialRoomsFromExisting(currentRooms as Room[]);
-
-        const sorted = buildOfficialRoomsFromExisting(currentRooms as Room[]);
-        setRooms(sorted);
-        persistRoomsLocalBackup(sorted);
-
-        // Si el respaldo local tiene una habitación más reciente que la nube, reintentar subirla.
-        if (userProfile?.rol !== 'visor') {
-          const localRooms = safeGetLocalStorage<Room[]>('hotel_rooms', []);
-          localRooms.forEach((localRoom) => {
-            const cloudRoom = cloudItems.find((r) => r.id === localRoom.id);
-            if (localRoom?.id && getRoomUpdatedMs(localRoom) > getRoomUpdatedMs(cloudRoom)) {
-              saveRoomToFirestore(localRoom).catch((err) => {
-                console.warn('No se pudo sincronizar habitación local más reciente:', localRoom?.id, err);
-              });
-            }
-          });
-        }
-      }
+      // Leer no restaura ni sobrescribe habitaciones desde una caché antigua.
+      const sorted = buildOfficialRoomsFromExisting(cloudItems);
+      setRooms(sorted);
+      persistRoomsLocalBackup(sorted);
 
       setOnlineStatus('online');
     });
@@ -974,27 +922,8 @@ export default function App() {
       updateSyncTimestamp();
       setOnlineStatus('syncing');
 
-      let hasLegacyBase = false;
-      const sanitizedItems = (items || []).map((s) => {
-        if (s.estado === 'abierto' && (s.baseInicial === 668500 || (s as any).baseConfirmadaApertura === 668500)) {
-          hasLegacyBase = true;
-          return {
-            ...s,
-            baseInicial: 0,
-            baseConfirmadaApertura: 0,
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return s;
-      });
-
-      if (hasLegacyBase) {
-        sanitizedItems.forEach((s) => {
-          if (s.estado === 'abierto') {
-            saveShiftToFirestore(s).catch((err) => console.warn("Error guardando turno con base inicial 0:", err));
-          }
-        });
-      }
+      // Conservar los importes históricos al abrir el sistema.
+      const sanitizedItems = Array.isArray(items) ? items : [];
 
       setShifts(sanitizedItems);
       // Elegir SIEMPRE el turno abierto más reciente. Firestore no garantiza el orden
@@ -1109,8 +1038,8 @@ export default function App() {
     setAdminModalOpen(true);
   };
 
-  const confirmAdminPassword = (password: string): boolean => {
-    if (password !== '4321') {
+  const confirmAdminPassword = async (password: string): Promise<boolean> => {
+    if (!(await verifyAdminPassword(password))) {
       return false;
     }
     setAdminModalOpen(false);

@@ -2,7 +2,7 @@ import { auth, db, isFirebaseConfigured, firebaseConfig } from '../firebase';
 import { 
   doc, 
   setDoc, 
-  getDoc, 
+  getDoc, getDocFromServer, 
   collection, 
   getDocs, 
   addDoc, 
@@ -260,7 +260,8 @@ function normalizeProductCollectionForStorage<T = any>(collectionName: string, i
 
   for (const rawItem of rawList) {
     if (!rawItem) continue;
-    const canonical = getCanonicalProductName(rawItem.nombre || rawItem.name);
+    const namedItem = rawItem as { nombre?: string; name?: string };
+    const canonical = getCanonicalProductName(namedItem.nombre || namedItem.name);
     if (!canonical) continue;
     const item = forceArchiveProductIfHidden({ ...rawItem, nombre: canonical });
     const existing = byCanonical.get(canonical);
@@ -703,127 +704,14 @@ async function saveDocumentSafely<T extends { id?: string }>(
 // ==========================================
 
 export const loginUser = async (email: string, pass: string) => {
-  const cleanEmail = (email || '').trim().toLowerCase();
-  const cleanPass = (pass || '').trim();
-
-  if (!isFirebaseConfigured || !auth) {
-    let rol: 'admin' | 'recepcionista' | 'visor' = 'admin';
-    let nombre = 'Administrador Local';
-    
-    if (cleanEmail.includes('recep') || cleanEmail.includes('alicia') || cleanEmail.includes('paola') || cleanEmail.includes('mileydi')) {
-      rol = 'recepcionista';
-      nombre = 'Recepcionista Local';
-    } else if (cleanEmail.includes('visor') || cleanEmail.includes('prop')) {
-      rol = 'visor';
-      nombre = 'Visor Local';
-    }
-    
-    const mockProfile: FirebaseUser = {
-      uid: 'local-uid-' + rol,
-      nombre,
-      email: cleanEmail,
-      rol,
-      activo: true,
-      createdAt: new Date().toISOString()
-    };
-    cachedUserProfile = mockProfile;
-    
-    return {
-      firebaseUser: { uid: mockProfile.uid, email: cleanEmail } as any,
-      profile: mockProfile
-    };
+  if (!isFirebaseConfigured || !auth) throw new Error('El sistema no tiene conexión configurada con Firebase.');
+  const credentials = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
+  const profile = await getUserProfile(credentials.user.uid);
+  if (!profile) {
+    await signOut(auth);
+    throw new Error('No se pudo verificar un perfil activo. Revisa la conexión o contacta al administrador.');
   }
-
-  const credentials = await signInWithEmailAndPassword(auth, cleanEmail, cleanPass);
-  const uid = credentials.user.uid;
-  const userRef = doc(db, 'hotel_users', uid);
-
-  try {
-    let userDoc = await getDoc(userRef);
-    
-    // Si no existe el documento en hotel_users, lo creamos automáticamente para no bloquear el login
-    if (!userDoc.exists()) {
-      const defaultRole: UserRole = cleanEmail.includes('admin') ? 'admin' : (cleanEmail.includes('propietario') || cleanEmail.includes('visor') ? 'visor' : 'recepcionista');
-      const empProf = getEmployeeProfile(cleanEmail);
-      
-      const newProfile: FirebaseUser = {
-        uid,
-        email: cleanEmail,
-        nombre: empProf ? empProf.name : (credentials.user.displayName || cleanEmail.split('@')[0].toUpperCase()),
-        nombreCompleto: empProf ? empProf.nombreCompleto : '',
-        fechaNacimiento: empProf?.fechaNacimiento || '',
-        fechaNacimientoTexto: empProf?.fechaNacimientoTexto || '',
-        rol: defaultRole,
-        activo: true,
-        createdAt: new Date().toISOString()
-      };
-
-      try {
-        await setDoc(userRef, sanitizeForFirestore(newProfile));
-      } catch (writeErr) {
-        console.warn("Aviso al crear documento de usuario en Firestore hotel_users:", writeErr);
-      }
-
-      cachedUserProfile = newProfile;
-      return {
-        firebaseUser: credentials.user,
-        profile: newProfile
-      };
-    }
-
-    const data = userDoc.data() as FirebaseUser;
-    
-    if (data.activo === false) {
-      throw new Error(`El usuario está desactivado por administración.`);
-    }
-
-    // Automatically augment and synchronize employee fields in Firestore if available
-    const empProf = getEmployeeProfile(cleanEmail || data.nombre);
-    let needsUpdate = false;
-    if (empProf && (!data.nombreCompleto || data.nombreCompleto !== empProf.nombreCompleto)) {
-      data.nombreCompleto = empProf.nombreCompleto;
-      data.fechaNacimiento = empProf.fechaNacimiento;
-      data.fechaNacimientoTexto = empProf.fechaNacimientoTexto;
-      data.nombre = empProf.name;
-      needsUpdate = true;
-    }
-
-    if (needsUpdate) {
-      try {
-        await setDoc(userRef, sanitizeForFirestore(data), { merge: true });
-      } catch (e) {
-        console.warn("Could not save merged employee profile in loginUser:", e);
-      }
-    }
-
-    cachedUserProfile = data;
-    return {
-      firebaseUser: credentials.user,
-      profile: data
-    };
-  } catch (firestoreError: any) {
-    if (firestoreError.message && firestoreError.message.includes('desactivado')) {
-      throw firestoreError;
-    }
-    
-    // Si hubo error de lectura por reglas o red temporal, proveer perfil seguro y continuar
-    console.warn("Lectura de perfil en hotel_users con fallback:", firestoreError);
-    const fallbackRol: UserRole = cleanEmail.includes('admin') ? 'admin' : (cleanEmail.includes('propietario') ? 'visor' : 'recepcionista');
-    const fallbackProfile: FirebaseUser = {
-      uid,
-      email: cleanEmail,
-      nombre: cleanEmail.split('@')[0].toUpperCase(),
-      nombreCompleto: '',
-      rol: fallbackRol,
-      activo: true,
-      createdAt: new Date().toISOString()
-    };
-    cachedUserProfile = fallbackProfile;
-    return {
-      firebaseUser: credentials.user,
-      profile: fallbackProfile
-    };
-  }
+  return { firebaseUser: credentials.user, profile };
 };
 
 export const registerUser = async (email: string, pass: string, nombre: string, rol: UserRole) => {
@@ -905,100 +793,17 @@ export const logoutUser = async () => {
 };
 
 export const getUserProfile = async (uid: string): Promise<FirebaseUser | null> => {
-  if (!isFirebaseConfigured) {
-    let rol: 'admin' | 'recepcionista' | 'visor' = 'admin';
-    let nombre = 'Administrador Local';
-    if (uid.includes('recep') || uid.includes('alicia')) {
-      rol = 'recepcionista';
-      nombre = 'Recepcionista Local';
-    } else if (uid.includes('visor') || uid.includes('prop')) {
-      rol = 'visor';
-      nombre = 'Visor Local';
-    }
-    const localProf: FirebaseUser = {
-      uid,
-      nombre,
-      email: `${rol}@hotelkodiak.com`,
-      rol,
-      activo: true,
-      createdAt: new Date().toISOString()
-    };
-    const empProf = getEmployeeProfile(localProf.email || localProf.nombre);
-    if (empProf) {
-      localProf.nombre = empProf.name;
-      localProf.nombreCompleto = empProf.nombreCompleto;
-      localProf.fechaNacimiento = empProf.fechaNacimiento;
-      localProf.fechaNacimientoTexto = empProf.fechaNacimientoTexto;
-    }
-    cachedUserProfile = localProf;
-    return localProf;
-  }
-
+  cachedUserProfile = null;
+  if (!isFirebaseConfigured || !auth?.currentUser || auth.currentUser.uid !== uid) return null;
   try {
-    const userDoc = await getDoc(doc(db, 'hotel_users', uid));
-    if (userDoc.exists()) {
-      const data = userDoc.data() as FirebaseUser;
-      if (data.activo !== false) {
-        const empProf = getEmployeeProfile(data.email || data.nombre);
-        if (empProf && (!data.nombreCompleto || data.nombreCompleto !== empProf.nombreCompleto)) {
-          data.nombre = empProf.name;
-          data.nombreCompleto = empProf.nombreCompleto;
-          data.fechaNacimiento = empProf.fechaNacimiento;
-          data.fechaNacimientoTexto = empProf.fechaNacimientoTexto;
-          try {
-            await setDoc(doc(db, 'hotel_users', uid), sanitizeForFirestore(data), { merge: true });
-          } catch (e) {
-            console.warn("Could not save merged employee profile in getUserProfile:", e);
-          }
-        }
-        cachedUserProfile = data;
-        return data;
-      }
-      return null;
-    } else {
-      // Auto-provision if user exists in Firebase Auth but missing doc in hotel_users
-      const currentEmail = (auth.currentUser?.email || '').trim().toLowerCase();
-      const defaultRole: UserRole = currentEmail.includes('admin') ? 'admin' : (currentEmail.includes('propietario') || currentEmail.includes('visor') ? 'visor' : 'recepcionista');
-      const empProf = getEmployeeProfile(currentEmail);
-      
-      const newProfile: FirebaseUser = {
-        uid,
-        email: currentEmail,
-        nombre: empProf ? empProf.name : (auth.currentUser?.displayName || currentEmail.split('@')[0].toUpperCase()),
-        nombreCompleto: empProf ? empProf.nombreCompleto : '',
-        fechaNacimiento: empProf?.fechaNacimiento || '',
-        fechaNacimientoTexto: empProf?.fechaNacimientoTexto || '',
-        rol: defaultRole,
-        activo: true,
-        createdAt: new Date().toISOString()
-      };
-
-      try {
-        await setDoc(doc(db, 'hotel_users', uid), sanitizeForFirestore(newProfile));
-      } catch (writeErr) {
-        console.warn("Aviso al auto-provisionar usuario en getUserProfile:", writeErr);
-      }
-      cachedUserProfile = newProfile;
-      return newProfile;
-    }
+    const snapshot = await getDocFromServer(doc(db, 'hotel_users', uid));
+    if (!snapshot.exists()) return null;
+    const data = snapshot.data() as FirebaseUser;
+    if (data.activo === false || !['admin', 'recepcionista', 'visor'].includes(data.rol)) return null;
+    cachedUserProfile = { ...data, uid };
+    return cachedUserProfile;
   } catch (error) {
     logFirestoreError('read', 'hotel_users', uid, error, 'firebaseService.ts');
-    // Fallback safe profile in case of network glitch
-    const currentEmail = (auth.currentUser?.email || '').trim().toLowerCase();
-    if (currentEmail) {
-      const fallbackRole: UserRole = currentEmail.includes('admin') ? 'admin' : (currentEmail.includes('propietario') ? 'visor' : 'recepcionista');
-      const fallbackProfile: FirebaseUser = {
-        uid,
-        email: currentEmail,
-        nombre: currentEmail.split('@')[0].toUpperCase(),
-        nombreCompleto: '',
-        rol: fallbackRole,
-        activo: true,
-        createdAt: new Date().toISOString()
-      };
-      cachedUserProfile = fallbackProfile;
-      return fallbackProfile;
-    }
     return null;
   }
 };

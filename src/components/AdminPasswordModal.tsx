@@ -5,33 +5,37 @@ interface AdminPasswordModalProps {
   open: boolean;
   title?: string;
   message?: string;
-  onConfirm: (password: string) => boolean;
+  onConfirm: (password: string) => boolean | Promise<boolean>;
   onCancel: () => void;
 }
 
 export function AdminPasswordModal({
   open,
   title = 'Validación administrativa',
-  message = 'Ingrese la contraseña administrativa para continuar.',
+  message = 'Se requiere una sesión administradora. Ingrese la contraseña de esa cuenta para continuar.',
   onConfirm,
   onCancel,
 }: AdminPasswordModalProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setError('');
-
-    const isCorrect = onConfirm(password);
-    if (isCorrect) {
+    setBusy(true);
+    try {
+      const isCorrect = await onConfirm(password);
+      if (!isCorrect) setError('No se pudo verificar la cuenta administradora. Revise su sesión, contraseña y conexión.');
+    } catch {
+      setError('No se pudo completar la operación. Inténtelo de nuevo.');
+    } finally {
       setPassword('');
-      setError('');
-    } else {
-      setError('Contraseña incorrecta.');
+      setBusy(false);
     }
   };
 
@@ -72,6 +76,8 @@ export function AdminPasswordModal({
               </span>
               <input
                 autoFocus
+                disabled={busy}
+                autoComplete="current-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -106,15 +112,17 @@ export function AdminPasswordModal({
             <button
               type="button"
               onClick={handleClose}
+              disabled={busy}
               className="py-2.5 px-4 border border-slate-800 hover:border-slate-700 bg-slate-950 hover:bg-slate-900 text-slate-300 text-xs font-bold rounded-xl transition-all active:scale-[0.98]"
             >
               Cancelar
             </button>
             <button
               type="submit"
+              disabled={busy}
               className="py-2.5 px-4 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold rounded-xl shadow-lg hover:shadow-red-950/20 transition-all active:scale-[0.98]"
             >
-              Confirmar
+              {busy ? 'Verificando…' : 'Confirmar'}
             </button>
           </div>
         </form>
@@ -122,3 +130,4 @@ export function AdminPasswordModal({
     </div>
   );
 }
+
