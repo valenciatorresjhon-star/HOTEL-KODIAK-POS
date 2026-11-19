@@ -1,3 +1,4 @@
+import { getCountedOpeningCash } from '../types';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   TrendingUp, 
@@ -1104,13 +1105,13 @@ export function OwnerMobileView({
 
     const totalGastos = expensesToday.reduce((acc, curr) => acc + getMoneyValue(curr.valor), 0);
     const gananciaNeta = ingresosTotales - totalGastos;
-    const baseInicialActiva = 0; // Base contable del turno: siempre cero.
+    const baseInicialActiva = getCountedOpeningCash(activeShift);
     const cajaFisicaEsperada = baseInicialActiva + ingresosEfectivo - gastosEfectivo;
 
     // Room stats
     const totalRooms = rooms.length;
-    const occupiedRooms = rooms.filter(r => r.estado === 'ocupada').length;
-    const availableRooms = totalRooms - occupiedRooms;
+    const occupiedRooms = rooms.filter(r => !r.fueraServicio && r.estado === 'ocupada').length;
+    const availableRooms = rooms.filter(r => !r.fueraServicio && r.estado === 'disponible').length;
 
     // Low stock alert products
     const lowStockAlerts = liveInventoryProducts.filter(p => {
@@ -1645,11 +1646,13 @@ export function OwnerMobileView({
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-black text-white truncate max-w-[80px]">{room.nombre}</span>
                       <span className={`text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded font-extrabold ${
-                        isRoomOccupied 
-                          ? 'bg-amber-500/20 text-amber-400' 
-                          : 'bg-slate-950 text-emerald-400 border border-emerald-500/25'
+                        room.fueraServicio
+                          ? 'bg-slate-800 text-slate-300'
+                          : isRoomOccupied
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-slate-950 text-emerald-400 border border-emerald-500/25'
                       }`}>
-                        {isRoomOccupied ? 'ocupada' : 'disponible'}
+                        {room.fueraServicio ? 'fuera de servicio' : room.estado}
                       </span>
                     </div>
 

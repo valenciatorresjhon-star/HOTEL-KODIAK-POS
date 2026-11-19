@@ -11,7 +11,7 @@ assert.ok(process.env.FIRESTORE_EMULATOR_HOST?.startsWith('127.0.0.1:') || proce
 await build({entryPoints:['src/kodiakRules.ts'],bundle:true,platform:'node',format:'esm',outfile:'tests/catalog.generated.mjs'});
 const { buildOfficialRoomsFromExisting, KODIAK_OFFICIAL_ROOMS } = await import('./catalog.generated.mjs');
 assert.equal(KODIAK_OFFICIAL_ROOMS.length,17);
-const env = await initializeTestEnvironment({projectId,firestore:{host:'127.0.0.1',port:8080}});
+const env = await initializeTestEnvironment({projectId,firestore:{host:'127.0.0.1',port:Number(process.env.FIRESTORE_EMULATOR_HOST.split(':').at(-1))}});
 const password = 'SoloPruebas2026!';
 try {
   for (const [rol,nombre,email] of [

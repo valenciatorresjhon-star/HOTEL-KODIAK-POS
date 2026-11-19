@@ -1,3 +1,4 @@
+import { getCountedOpeningCash } from './types';
 import { verifyAdminPassword } from './services/adminVerification';
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { 
@@ -455,7 +456,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
   const totalGastos = reportExpenses.reduce((sum, e) => sum + getMoneySafe(e.valor), 0);
 
   const ocupadas = rooms.filter((r: any) => r.estado === 'ocupada' || r.status === 'occupied' || r.isOccupied === true || r.occupied === true).length;
-  const disponibles = Math.max(0, rooms.length - ocupadas);
+  const disponibles = rooms.filter(r => !r.fueraServicio && r.estado === 'disponible').length;
   const stockBajo = products.filter((p: any) => isProductVisible(p) && Number(p.stock || 0) <= Number(p.stockMinimo || 0)).length;
   const agotados = products.filter((p: any) => isProductVisible(p) && Number(p.stock || 0) <= 0).length;
   const reservasHoy = reservations.filter((r: any) => isTodayColombiaFromAny(r.createdAt, r.checkInDate)).length;
@@ -464,7 +465,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     scope: activeShiftId ? 'turno activo' : 'día',
     activeShiftId: activeShiftId || '',
     empleadoTurno: activeShift?.empleada || '',
-    baseInicial: 0,
+    baseInicial: getCountedOpeningCash(activeShift),
     ventasHabitaciones,
     ventasProductos,
     reservasAbonos,
@@ -475,7 +476,7 @@ function computeKodiakReport(activeShift: Shift | null, sales: Sale[], expenses:
     gastosEfectivo,
     gastosTransferencia,
     totalGastos,
-    cajaEsperada: efectivo - gastosEfectivo,
+    cajaEsperada: getCountedOpeningCash(activeShift) + efectivo - gastosEfectivo,
     habitacionesOcupadas: ocupadas,
     habitacionesDisponibles: disponibles,
     productosStockBajo: stockBajo,
@@ -1097,17 +1098,13 @@ export default function App() {
   // Update handlers pushing directly to Firebase
   const handleOpenShift = async (newShift: Shift) => {
     setOnlineStatus('syncing');
-    // Segunda protección en el guardado: ninguna apertura nueva hereda efectivo.
-    // No se modifican turnos existentes ni cierres históricos.
-    const shiftWithZeroBase: Shift = {
-      ...newShift,
-      baseInicial: 0,
-      baseConfirmadaApertura: 0,
-      diferenciaBaseVsCierreAnterior: 0,
-      aperturaConDiferencia: false
-    };
-    await saveShiftToFirestore(shiftWithZeroBase);
-    setActiveShift(shiftWithZeroBase);
+    try {
+      await saveShiftToFirestore(newShift);
+      setActiveShift(newShift);
+    } catch (error) {
+      setOnlineStatus('offline');
+      throw error;
+    }
     setActiveTab('inicio');
     setOnlineStatus('online');
   };

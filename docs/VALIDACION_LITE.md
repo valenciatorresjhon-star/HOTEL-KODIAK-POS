@@ -4,7 +4,12 @@ La rama parte de la publicación del 18 de noviembre de 2026 (main, 7bb2f36). Re
 
 ## Entorno de pruebas
 
-El proyecto previsto para las pruebas por internet es `kodiak-staging-20261114`. Utilizar su configuración de Firebase, Auth con cuentas de prueba y Firestore con datos ficticios. Para el despliegue de la compilación se debe usar una configuración de Hosting que apunte explícitamente al sitio de ese proyecto. El `firebase.json` de la raíz apunta al sitio de producción. Las reglas en `config/firestore.staging.rules` se ejercitan localmente con el proyecto emulado `demo-hotel-kodiak`.
+El proyecto en línea para pruebas es `kodiak-staging-20261114`. Desde la raíz del repositorio:
+
+- `npm run firebase:preview -- --prepare-only` compila para ese proyecto y muestra el directorio generado.
+- `npm run firebase:preview` verifica que la cuenta autorizada acceda al sitio, compila y publica el canal temporal `lite` por siete días. Requiere autenticación de Firebase CLI. La configuración de Hosting que genera el comando selecciona explícitamente el proyecto de pruebas.
+
+Las pruebas de reglas se ejecutan con datos ficticios en el proyecto emulado `demo-hotel-kodiak`. Para las pruebas en línea, usar cuentas y datos de prueba.
 
 Al abrir una URL nueva, iniciar sesión como recepcionista y visor desde dos dispositivos en redes distintas. Registrar una ocupación, una venta con un artículo, un gasto y un cierre de prueba. Comprobar habitación, ingreso, stock y caja en el visor sin recargar. Repetir con una reconexión del visor y comprobar que el rol de visor tiene permiso de lectura únicamente.
 

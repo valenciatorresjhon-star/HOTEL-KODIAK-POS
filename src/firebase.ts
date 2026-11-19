@@ -40,7 +40,7 @@ if (isFirebaseConfigured) {
     if (useEmulators) {
       const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || '127.0.0.1';
       connectAuthEmulator(authInstance, 'http://' + host + ':9099', { disableWarnings: true });
-      connectFirestoreEmulator(dbInstance, host, 8080);
+      connectFirestoreEmulator(dbInstance, host, Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT || 8080));
     }
   } catch (error) {
     console.warn('[Firebase] Error initializing Firebase:', error);

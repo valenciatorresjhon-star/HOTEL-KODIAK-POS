@@ -274,6 +274,7 @@ export interface Shift {
   id: string;
   empleada: string;
   baseInicial: number;
+  baseContadaEnApertura?: boolean;
   fechaApertura: string;
   horaApertura: string;
   createdAt: string;
@@ -296,6 +297,11 @@ export interface Shift {
   diferenciaBaseVsCierreAnterior?: number;
   aperturaConDiferencia?: boolean;
   observacionDiferenciaBase?: string;
+}
+
+export function getCountedOpeningCash(shift?: Shift | null): number {
+  return shift?.baseContadaEnApertura === true &&
+    Number.isSafeInteger(shift.baseInicial) && shift.baseInicial >= 0 ? shift.baseInicial : 0;
 }
 
 export interface ProductInventoryClosure {

@@ -277,7 +277,7 @@ function normalizeProductCollectionForStorage<T = any>(collectionName: string, i
 function normalizeShiftCollectionForStorage<T = any>(collectionName: string, items: T[]): T[] {
   if (collectionName !== 'hotel_shifts') return items;
   return (Array.isArray(items) ? items : []).map((item: any) => {
-    if (item && item.estado === 'abierto' && (item.baseInicial === 668500 || item.baseConfirmadaApertura === 668500)) {
+    if (item && item.estado === 'abierto' && item.baseContadaEnApertura !== true && (item.baseInicial === 668500 || item.baseConfirmadaApertura === 668500)) {
       return {
         ...item,
         baseInicial: 0,
@@ -411,7 +411,7 @@ function mergeCollectionsPreferNewest(collectionName: string, remoteItems: any[]
     // Regla de sanitización para turnos activos: corregir saldo legado de 668.500 a 0
     if (collectionName === 'hotel_shifts') {
       const currentMerged = map.get(key);
-      if (currentMerged && currentMerged.estado === 'abierto' && (currentMerged.baseInicial === 668500 || currentMerged.baseConfirmadaApertura === 668500)) {
+      if (currentMerged && currentMerged.estado === 'abierto' && currentMerged.baseContadaEnApertura !== true && (currentMerged.baseInicial === 668500 || currentMerged.baseConfirmadaApertura === 668500)) {
         map.set(key, {
           ...currentMerged,
           baseInicial: 0,
