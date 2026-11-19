@@ -10,9 +10,13 @@ const args = process.argv.slice(2);
 const prepareOnly = args.length === 1 && args[0] === '--prepare-only';
 if (args.length && !prepareOnly) throw new Error('Uso: npm run firebase:preview [-- --prepare-only]');
 
-const firebase = (...args) => execFileSync('npx', ['--yes', 'firebase-tools@15.37.0', ...args], {
-  stdio: 'inherit',
-});
+function firebase(...args) {
+  const npmCli = process.env.npm_execpath;
+  if (!npmCli) throw new Error('Ejecute este comando con npm run firebase:preview.');
+  execFileSync(process.execPath, [npmCli, 'exec', '--yes', '--package', 'firebase-tools@15.37.0', '--', 'firebase', ...args], {
+    stdio: 'inherit',
+  });
+}
 if (!prepareOnly) {
   firebase('hosting:sites:get', project, '--project', project, '--non-interactive');
 }
