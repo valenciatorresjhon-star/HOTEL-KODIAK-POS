@@ -136,7 +136,7 @@ export const CajaView: React.FC<CajaProps> = ({
     // Pre-open print window if browser printer is active, before any async/state updates
     const settings = getSettings();
     let initialPrintWindow: Window | null = null;
-    if (settings.printerType === 'browser') {
+    if (metodoPago === 'Efectivo' && settings.printerType === 'browser' && settings.autoPrintEnabled) {
       initialPrintWindow = openBrowserPrintWindow();
       if (initialPrintWindow) {
         setBrowserPrintWindow(initialPrintWindow);

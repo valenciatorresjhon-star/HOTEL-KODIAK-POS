@@ -22,3 +22,10 @@
     display: none !important;
   }
 }
+
+/* Mantener legibles los estados en equipos con poca capacidad gráfica. */
+*, *::before, *::after {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+}

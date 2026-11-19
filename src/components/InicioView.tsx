@@ -1,15 +1,14 @@
 import React from 'react';
-import { Home, Calendar, ShieldCheck, Users, Bed, Package, Clock, LogOut, FileText, Monitor, HelpCircle, Laptop } from 'lucide-react';
-import { Shift, Room, Client, Product, Reservation, isProductVisible } from '../types';
+import { Home, Calendar, ShieldCheck, Bed, Package, Clock, LogOut, FileText, HelpCircle } from 'lucide-react';
+import { Shift, Room, Product, Reservation, isProductVisible } from '../types';
 import { formatCop, getTodayColombia } from '../utils/storage';
-import hotelLogo from '../assets/images/hotel_logo_1783287741164.jpg';
+import hotelLogo from '../assets/images/hotel-logo-lite.jpg';
 
 interface InicioProps {
   activeShift: Shift;
   rooms: Room[];
-  clients: Client[];
   products: Product[];
-  reservations: Reservation[];
+  reservations?: Reservation[];
   onTriggerLogOut: () => void;
   onLogout?: () => void;
 }
@@ -17,7 +16,6 @@ interface InicioProps {
 export const InicioView: React.FC<InicioProps> = ({
   activeShift,
   rooms,
-  clients,
   products,
   reservations,
   onTriggerLogOut,
@@ -37,7 +35,7 @@ export const InicioView: React.FC<InicioProps> = ({
         <div className="space-y-2 z-10">
           <div className="flex items-center gap-3">
             <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-xs text-emerald-400 font-bold uppercase tracking-wider">
-              Hotel Kodiak POS
+              Hotel Kodiak Lite
             </div>
             <span className="text-slate-500 text-xs font-mono">• {getTodayColombia()}</span>
           </div>
@@ -163,22 +161,7 @@ export const InicioView: React.FC<InicioProps> = ({
             </div>
           </div>
 
-          {/* Card Clients */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between h-32 relative overflow-hidden">
-            <div className="flex justify-between items-start">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Clientes</span>
-              <div className="bg-indigo-500/10 p-1.5 rounded-lg text-indigo-400">
-                <Users className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-3xl font-extrabold text-white">{clients.length}</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">Registrados en base</p>
-            </div>
-          </div>
-
-          {/* Card Reservations */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between h-32 relative overflow-hidden">
+          {reservations && <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between h-32 relative overflow-hidden">
             <div className="flex justify-between items-start">
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Reservas</span>
               <div className="bg-amber-500/10 p-1.5 rounded-lg text-amber-400">
@@ -189,7 +172,7 @@ export const InicioView: React.FC<InicioProps> = ({
               <p className="text-3xl font-extrabold text-white">{activeReservationsCount}</p>
               <p className="text-[10px] text-slate-400 font-medium mt-1">Pendientes / Confirmadas</p>
             </div>
-          </div>
+          </div>}
 
           {/* Card Products */}
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between h-32 relative overflow-hidden">
@@ -205,41 +188,6 @@ export const InicioView: React.FC<InicioProps> = ({
             </div>
           </div>
 
-          {/* PC Independent / Electron Ready */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between h-32 relative overflow-hidden col-span-2 sm:col-span-1">
-            <div className="flex justify-between items-start">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">PWA / Electron</span>
-              <div className="bg-emerald-500/10 p-1.5 rounded-lg text-emerald-400">
-                <Laptop className="h-4 w-4" />
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-300">Offline Activo</p>
-              <p className="text-[9px] text-slate-500 font-medium mt-1">Listo para app de escritorio Windows</p>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* PC Windows / Desktop deployment information */}
-      <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-5 space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-          <Monitor className="h-4 w-4 text-emerald-400" />
-          <span>Configuración del POS en PC Windows</span>
-        </h3>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Este sistema hotelero ha sido diseñado siguiendo estrictas reglas de compatibilidad para ejecutarse de manera local y autónoma. El archivo de empaquetado de Electron está completamente configurado para compilarse en un instalador nativo offline para Windows (<code>.msi</code> o <code>.exe</code>), permitiendo la conexión directa a la impresora POS y a la gaveta de dinero sin requerir internet.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-950 p-4 rounded-xl border border-slate-850/80 font-mono">
-          <div>
-            <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Comando Ejecución local</span>
-            <code className="text-emerald-400">npm run electron</code>
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Empaquetar para Windows</span>
-            <code className="text-indigo-400">npm run dist</code>
-          </div>
         </div>
       </div>
     </div>

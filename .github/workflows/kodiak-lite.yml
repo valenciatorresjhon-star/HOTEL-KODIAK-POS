@@ -1,0 +1,27 @@
+name: Validar Hotel Kodiak Lite
+on:
+  push:
+    branches:
+      - codex/hotel-kodiak-lite
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - name: Compilar con un proyecto ficticio
+        run: cp .env.staging.example .env.production.local && npm run build
+      - name: Validar Firestore y Authentication en emuladores
+        run: npx --yes firebase-tools@15.37.0 emulators:exec --project demo-hotel-kodiak --config config/firebase.staging.json --only firestore,auth 'npm run test:firebase'

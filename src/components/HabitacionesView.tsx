@@ -259,44 +259,6 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [showReceipt, setShowReceipt] = useState<boolean>(false);
   const [receiptData, setReceiptData] = useState<any>(null);
-  const [receiptAlreadyPrinted, setReceiptAlreadyPrinted] = useState<boolean>(false);
-
-  const handleAutoPrintReceipt = async (data: any) => {
-    if (hotelSettings && hotelSettings.autoPrintEnabled === false) {
-      console.log("Impresión automática desactivada en configuración.");
-      return;
-    }
-
-    try {
-      console.log("AUTO IMPRIMIENDO RECIBO", data);
-      
-      const status = getPrinterStatus();
-      const isRealHardware = status.connected && status.type === 'escpos';
-
-      if (isRealHardware) {
-        await printReceipt(data);
-      }
-    } catch (error) {
-      console.error("ERROR AL IMPRIMIR RECIBO:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!showReceipt || !receiptData) {
-      setReceiptAlreadyPrinted(false);
-      return;
-    }
-    if (receiptAlreadyPrinted) return;
-
-    setReceiptAlreadyPrinted(true);
-
-    const timer = setTimeout(() => {
-      handleAutoPrintReceipt(receiptData);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [showReceipt, receiptData]);
-
   // Releasing room states
   const [isReleasingRoom, setIsReleasingRoom] = useState<boolean>(false);
   const [lastReleaseError, setLastReleaseError] = useState<string>('');
@@ -659,7 +621,7 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
 
     // Pre-open print window for occupying room
     const settings = getSettings();
-    if (settings.printerType === 'browser' && settings.autoPrintEnabled) {
+    if (metodoPago === 'Efectivo' && settings.printerType === 'browser' && settings.autoPrintEnabled) {
       if (hotelSettings?.printOnRoomCharge ?? true) {
         const win = openBrowserPrintWindow();
         setBrowserPrintWindow(win);
@@ -920,11 +882,6 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
     });
     onUpdateRooms(updatedRooms);
 
-    // Open cash drawer automatically if Cash method
-    if (metodoPago === 'Efectivo') {
-      openCashDrawer(saleId, finalValorCobrado, metodoPago);
-    }
-
     // Prep receipt data
     const receipt = {
       hotel: 'Hotel Kodiak',
@@ -1182,7 +1139,7 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
                 console.error("Fallo apertura cajon checkout:", e);
               }
             }
-            if (hotelSettings?.printOnExtraHours ?? true) {
+            if (paymentMethod === 'Efectivo' && (hotelSettings?.autoPrintEnabled ?? true) && (hotelSettings?.printOnExtraHours ?? true)) {
               const receiptDataObj = {
                 id: '',
                 fecha: now.toLocaleDateString('es-CO'),
@@ -1254,36 +1211,6 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
           };
           onAddSale(checkoutSale);
 
-          // Integrated print and cash drawer trigger for extra hours charge (offline path)
-          if (!isExonerated) {
-            if (paymentMethod === 'Efectivo') {
-              try {
-                await openCashDrawer(checkoutSaleId, amountCharged, 'Efectivo');
-              } catch (e) {
-                console.error("Fallo apertura cajon checkout (offline):", e);
-              }
-            }
-            if (hotelSettings?.printOnExtraHours ?? true) {
-              const receiptDataObj = {
-                id: checkoutSaleId,
-                fecha: now.toLocaleDateString('es-CO'),
-                hora: formattedHora,
-                employeeName: activeShift?.empleada || 'Sistema',
-                turno: activeShift?.id || 'N/A',
-                cliente: roomToRelease.cliente || 'Anónimo',
-                habitacion: roomToRelease.nombre || roomToRelease.id,
-                metodoPago: paymentMethod,
-                total: amountCharged,
-                concepto: `Cobro Horas Extras: Hab ${roomToRelease.nombre} (${horasAdicionales} hrs)`,
-                tipo: 'Horas Adicionales'
-              };
-              try {
-                await printReceipt(receiptDataObj);
-              } catch (err) {
-                console.error("Fallo auto-impresión horas extras (offline):", err);
-              }
-            }
-          }
         } else {
           const checkoutSale: Sale = {
             id: checkoutSaleId,
@@ -2930,7 +2857,7 @@ export const HabitacionesView: React.FC<HabitacionesProps> = ({
                   type="button"
                   disabled={isReleasingRoom || (hasExtraHours && releaseActionType === 'exonerar' && !releaseObservation.trim())}
                   onClick={() => {
-                    if (hasExtraHours && releaseActionType === 'cobrar') {
+                    if (hasExtraHours && releaseActionType === 'cobrar' && releasePaymentMethod === 'Efectivo') {
                       const settings = getSettings();
                       if (settings.printerType === 'browser' && settings.autoPrintEnabled) {
                         if (hotelSettings?.printOnExtraHours ?? true) {

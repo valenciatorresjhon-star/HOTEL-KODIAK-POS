@@ -1336,17 +1336,6 @@ export async function printReceipt(rawReceiptData: any, printWindow?: Window | n
       error: null
     });
 
-    // 3. Auto-Open Drawer if Cash
-    if (settings.autoOpenDrawer && (!settings.openDrawerCashOnly || isCash)) {
-      await openCashDrawer(
-        'automatic_sale',
-        receiptData.id || '',
-        receiptData.total || 0,
-        receiptData.metodoPago || 'Efectivo',
-        receiptData.employeeName || 'Sistema',
-        receiptData.createdBy || 'system'
-      );
-    }
   } catch (error: any) {
     console.error("Fallo durante el flujo de impresión de recibo:", error);
     await savePrinterError({

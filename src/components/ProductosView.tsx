@@ -5,7 +5,7 @@ import { Product, Sale, Shift, PaymentMethod, FirebaseUser, getEmployeeFullName,
 import { formatCop, isInvalidValue } from '../utils/storage';
 import { AdminPasswordModal } from './AdminPasswordModal';
 import { auth } from '../firebase';
-import { getPrinterStatus, printReceipt, openCashDrawer as realOpenCashDrawer, getSettings, openBrowserPrintWindow, setBrowserPrintWindow } from '../services/printerService';
+import { getPrinterStatus, printReceipt, getSettings, openBrowserPrintWindow, setBrowserPrintWindow } from '../services/printerService';
 import { archiveProductToFirestore } from '../services/firebaseService';
 import { PriceRecoveryPanel } from './PriceRecoveryPanel';
 function normalizePaymentMethod(method: any): string {
@@ -167,84 +167,6 @@ export const ProductosView: React.FC<ProductosProps> = ({
   // Receipt states
   const [showReceipt, setShowReceipt] = useState<boolean>(false);
   const [receiptData, setReceiptData] = useState<any>(null);
-  const [receiptAlreadyPrinted, setReceiptAlreadyPrinted] = useState<boolean>(false);
-
-  const handleAutoPrintReceipt = async (data: any) => {
-    const detectedPaymentMethod =
-      data?.metodoPago ||
-      data?.paymentMethod ||
-      data?.metodo ||
-      '';
-
-    // REGLA HOTEL KODIAK:
-    // Solo los pagos en EFECTIVO generan recibo automático, impresión y apertura de cajón.
-    // Las TRANSFERENCIAS solo se guardan. No recibo, no impresión, no cajón.
-    if (!isCashPayment(detectedPaymentMethod)) {
-      console.log("Auto-impresión cancelada: el pago no es en efectivo.", detectedPaymentMethod);
-      return;
-    }
-
-    if (hotelSettings && hotelSettings.autoPrintEnabled === false) {
-      console.log("Impresión automática desactivada en configuración.");
-      return;
-    }
-
-    try {
-      console.log("AUTO IMPRIMIENDO RECIBO SOLO EFECTIVO", data);
-
-      const status = getPrinterStatus();
-      const isRealHardware = status.connected && status.type === 'escpos';
-
-      // Normalize product receipt fields into standard format
-      const normalizedReceipt = data.conceptos ? data : {
-        id: data.id || '',
-        fecha: data.fecha,
-        hora: data.hora,
-        employeeName: data.empleada || 'Sistema',
-        turno: data.turno || 'N/A',
-        cliente: 'Cliente General',
-        habitacion: '',
-        metodoPago: detectedPaymentMethod || 'Efectivo',
-        total: data.total,
-        pagadoWith: data.recibido || 0,
-        cambio: data.cambio || 0,
-        tipo: 'Venta Producto',
-        conceptos: [
-          {
-            descripcion: data.producto,
-            cantidad: data.cantidad,
-            total: data.total
-          }
-        ]
-      };
-
-      if (isRealHardware) {
-        await printReceipt(normalizedReceipt);
-      } else {
-        // Modo web / preview: solo efectivo llega aquí
-        window.print();
-      }
-    } catch (error) {
-      console.error("ERROR AL IMPRIMIR RECIBO:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!showReceipt || !receiptData) {
-      setReceiptAlreadyPrinted(false);
-      return;
-    }
-    if (receiptAlreadyPrinted) return;
-
-    setReceiptAlreadyPrinted(true);
-
-    const timer = setTimeout(() => {
-      handleAutoPrintReceipt(receiptData);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [showReceipt, receiptData]);
-
   // Synchronize default amounts based on subtotal
   useEffect(() => {
     if (sellProduct) {
@@ -415,29 +337,6 @@ export const ProductosView: React.FC<ProductosProps> = ({
   };
 
   // Function to open the cash drawer
-  const openCashDrawer = async (saleId: string = '', amount: number = 0, paymentMethod: string = 'Efectivo') => {
-    // Seguridad: el cajón solo se abre cuando entra dinero físico a caja.
-    if (!isCashPayment(paymentMethod)) {
-      console.log("No se abre cajón: el método de pago no es efectivo.", paymentMethod);
-      return;
-    }
-
-    try {
-      console.log("Abriendo caja registradora solo por pago en efectivo...");
-      await realOpenCashDrawer(
-        'product_sell',
-        saleId,
-        amount,
-        paymentMethod,
-        activeShift?.empleada || 'Sistema',
-        userProfile?.uid || 'system'
-      );
-      window.dispatchEvent(new Event("cash_drawer_opened"));
-    } catch (error) {
-      console.error("Error al abrir caja:", error);
-      alert("No se pudo abrir la caja automáticamente. Revise la conexión de la impresora/cajón.");
-    }
-  };
 
   // Handle direct sell
   const handleConfirmSell = async () => {
@@ -526,14 +425,6 @@ export const ProductosView: React.FC<ProductosProps> = ({
       return;
     } finally {
       setSellSaving(false);
-    }
-
-    // 3. Si es efectivo, abrir caja registradora de forma independiente.
-    // En transferencia NO se abre cajón.
-    if (shouldPrintReceipt) {
-      openCashDrawer(newSale.id, subtotal, sellMetodoPago);
-    } else if (isTransferPayment(sellMetodoPago)) {
-      console.log("Transferencia registrada: no se abre cajón.");
     }
 
     // 4. Preparar datos para el recibo de venta

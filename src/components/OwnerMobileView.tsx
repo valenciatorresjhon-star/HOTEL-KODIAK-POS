@@ -28,12 +28,11 @@ import {
   Share2,
   FileSpreadsheet
 } from 'lucide-react';
-import { Room, Client, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, isProductVisible } from '../types';
+import { Room, Product, Sale, Expense, Shift, ShiftClosure, Reservation, FirebaseUser, isProductVisible } from '../types';
 import { formatCop, formatSafeDate, getTodayColombia } from '../utils/storage';
 import { isFirebaseConfigured, db, auth } from '../firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import * as XLSX from 'xlsx';
-import hotelLogo from '../assets/images/hotel_logo_1783287741164.jpg';
+import hotelLogo from '../assets/images/hotel-logo-lite.jpg';
 import { 
   getSettings, 
   openBrowserPrintWindow, 
@@ -428,7 +427,6 @@ function getOwnerAlertClasses(severity: string): string {
 
 interface OwnerMobileViewProps {
   rooms: Room[];
-  clients: Client[];
   products: Product[];
   sales: Sale[];
   expenses: Expense[];
@@ -445,7 +443,6 @@ interface OwnerMobileViewProps {
 
 export function OwnerMobileView({
   rooms,
-  clients,
   products,
   sales,
   expenses,
@@ -842,7 +839,7 @@ export function OwnerMobileView({
     };
   }, [filteredClosures]);
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
       if (filteredClosures.length === 0) {
         alert("No hay cierres para exportar en el filtro actual.");
@@ -894,6 +891,7 @@ export function OwnerMobileView({
         };
       });
 
+      const XLSX = await import('xlsx');
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Cierres Filtrados");

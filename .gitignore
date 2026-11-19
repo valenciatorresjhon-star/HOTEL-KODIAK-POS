@@ -7,4 +7,10 @@ coverage/
 *.log
 .env*
 !.env.example
+!.env.staging.example
 
+
+# Resultados generados por los emuladores de pruebas
+tests/service.generated.mjs
+tests/catalog.generated.mjs
+tests/results.json

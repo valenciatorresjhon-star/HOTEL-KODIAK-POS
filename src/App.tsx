@@ -1,5 +1,5 @@
 import { verifyAdminPassword } from './services/adminVerification';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { 
   Home, 
   Bed, 
@@ -30,23 +30,15 @@ import {
 // Component views
 import { ShiftLockScreen } from './components/ShiftLockScreen';
 import { InicioView } from './components/InicioView';
-import { HabitacionesView } from './components/HabitacionesView';
-import { ProductosView } from './components/ProductosView';
-import { CajaView } from './components/CajaView';
-import { DashboardView } from './components/DashboardView';
-import { ClientesView } from './components/ClientesView';
-import { ReservasView } from './components/ReservasView';
-import { CierreTurnoView } from './components/CierreTurnoView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AdminPasswordModal } from './components/AdminPasswordModal';
-import hotelLogo from './assets/images/hotel_logo_1783287741164.jpg';
+import hotelLogo from './assets/images/hotel-logo-lite.jpg';
 import { buildOfficialRoomsFromExisting, hydrateOfficialRoom, KODIAK_OFFICIAL_ROOMS } from './kodiakRules';
 
 // Firebase Integrations
 import { auth, isFirebaseConfigured } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { LoginView } from './components/LoginView';
-import { OwnerMobileView } from './components/OwnerMobileView';
 import { 
   subscribeToCollection,
   saveRoomToFirestore,
@@ -80,6 +72,22 @@ import {
   printExpenseReceipt,
   getSettings
 } from './services/printerService';
+
+const HabitacionesView = lazy(() => import('./components/HabitacionesView').then(module => ({ default: module.HabitacionesView })));
+
+const ProductosView = lazy(() => import('./components/ProductosView').then(module => ({ default: module.ProductosView })));
+
+const CajaView = lazy(() => import('./components/CajaView').then(module => ({ default: module.CajaView })));
+
+const DashboardView = lazy(() => import('./components/DashboardView').then(module => ({ default: module.DashboardView })));
+
+const ClientesView = lazy(() => import('./components/ClientesView').then(module => ({ default: module.ClientesView })));
+
+const ReservasView = lazy(() => import('./components/ReservasView').then(module => ({ default: module.ReservasView })));
+
+const CierreTurnoView = lazy(() => import('./components/CierreTurnoView').then(module => ({ default: module.CierreTurnoView })));
+
+const OwnerMobileView = lazy(() => import('./components/OwnerMobileView').then(module => ({ default: module.OwnerMobileView })));
 
 type TabType = 'inicio' | 'habitaciones' | 'productos' | 'caja' | 'dashboard' | 'clientes' | 'reservas' | 'cierre';
 
@@ -873,6 +881,7 @@ export default function App() {
     if (!userProfile) return;
 
     setOnlineStatus('syncing');
+    const owner = userProfile.rol === 'visor';
 
     // Rooms Real-time Sync
     const unsubRooms = subscribeToCollection<Room>('hotel_rooms', (items) => {
@@ -883,7 +892,7 @@ export default function App() {
       // Leer no restaura ni sobrescribe habitaciones desde una caché antigua.
       const sorted = buildOfficialRoomsFromExisting(cloudItems);
       setRooms(sorted);
-      persistRoomsLocalBackup(sorted);
+      if (!owner) persistRoomsLocalBackup(sorted);
 
       setOnlineStatus('online');
     });
@@ -895,12 +904,6 @@ export default function App() {
       const visibleArr = safeArr.filter(isProductVisible);
       console.log('[App hotel_products] recibidos:', safeArr.length, 'visibles:', visibleArr.length, visibleArr.map((p) => p.nombre));
       setProducts(visibleArr);
-    });
-
-    // Clients Real-time Sync
-    const unsubClients = subscribeToCollection<Client>('hotel_clients', (items) => {
-      updateSyncTimestamp();
-      setClients(items);
     });
 
     // Sales Real-time Sync
@@ -944,7 +947,7 @@ export default function App() {
         setActiveShift(active);
         // If closure is in progress, force closure view
         const inProgress = safeGetLocalStorage<boolean>('hotel_closure_in_progress', false);
-        if (inProgress) {
+        if (inProgress && !owner) {
           setActiveTab('cierre');
           setClosureInProgress(true);
         }
@@ -962,14 +965,14 @@ export default function App() {
       setClosures(sortedClosures);
 
       const latestClosure = getLatestClosureForOpening(sortedClosures);
-      if (latestClosure) {
+      if (latestClosure && !owner) {
         safeSetLocalStorage('hotel_last_shift_closure', latestClosure);
         safeSetLocalStorage('hotel_next_shift_base', 0);
       }
     });
 
     // Reservations Real-time Sync
-    const unsubReservations = subscribeToCollection<Reservation>('hotel_reservations', (items) => {
+    const unsubReservations = userProfile.rol === 'recepcionista' ? () => {} : subscribeToCollection<Reservation>('hotel_reservations', (items) => {
       updateSyncTimestamp();
       setReservations(items);
     });
@@ -981,7 +984,7 @@ export default function App() {
       const config = safeItems.find(item => item?.id === 'kodiak_config') || (safeItems.length > 0 && safeItems[0]?.hotelName ? safeItems[0] : null);
       if (config) {
         setHotelSettings(config);
-        safeSetLocalStorage('hotel_settings', config);
+        if (!owner) safeSetLocalStorage('hotel_settings', config);
       } else {
         const localCached = safeGetLocalStorage('hotel_settings', DEFAULT_KODIAK_CONFIG);
         setHotelSettings(localCached);
@@ -991,7 +994,6 @@ export default function App() {
     return () => {
       unsubRooms();
       unsubProducts();
-      unsubClients();
       unsubSales();
       unsubExpenses();
       unsubShifts();
@@ -1000,6 +1002,12 @@ export default function App() {
       unsubSettings();
     };
   }, [userProfile]);
+
+  const needsClientDirectory = activeTab === 'habitaciones' || activeTab === 'clientes' || activeTab === 'reservas';
+  useEffect(() => {
+    if (!userProfile || userProfile.rol === 'visor' || !needsClientDirectory) return;
+    return subscribeToCollection<Client>('hotel_clients', setClients);
+  }, [userProfile, needsClientDirectory]);
 
   // Limpiar únicamente la sugerencia de apertura, sin alterar datos de cierres.
   useEffect(() => {
@@ -1052,6 +1060,7 @@ export default function App() {
 
   // Unified tab change helper with safety checks
   const handleTabChange = (targetTab: TabType) => {
+    if (targetTab === 'reservas' && userProfile?.rol !== 'admin') return;
     if (closureInProgress) {
       window.alert('Cierre de turno en proceso. Debe completarlo para continuar.');
       return;
@@ -1294,7 +1303,7 @@ export default function App() {
 
       if (triggerDrawer) {
         try {
-          await openCashDrawer();
+          await openCashDrawer('automatic_sale', newSale.id, newSale.total, newSale.metodoPago, newSale.empleada, newSale.createdBy);
         } catch (err: any) {
           console.error("Fallo apertura cajón:", err);
         }
@@ -1302,7 +1311,7 @@ export default function App() {
 
       // Check if receipt should print
       let shouldPrint = false;
-      if (autoPrint) {
+      if (autoPrint && isCashMovement) {
         if (newSale.tipoVenta === 'producto') {
           shouldPrint = hotelSettings?.printOnSale ?? true;
         } else if (newSale.tipoVenta === 'habitacion') {
@@ -1443,7 +1452,7 @@ export default function App() {
 
       // 2. Trigger receipt printing
       try {
-        await printExpenseReceipt(newExpense, initialPrintWindow);
+        if (newExpense.metodoPago === 'Efectivo' && (hotelSettings?.autoPrintEnabled ?? true)) await printExpenseReceipt(newExpense, initialPrintWindow);
       } catch (err: any) {
         console.error("Fallo impresión recibo de egreso:", err);
       }
@@ -1660,6 +1669,14 @@ export default function App() {
     setFirebaseUser(null);
     setUserProfile(null);
     setActiveShift(null);
+    setRooms([]);
+    setClients([]);
+    setProducts([]);
+    setSales([]);
+    setExpenses([]);
+    setShifts([]);
+    setClosures([]);
+    setReservations([]);
     setClosureInProgress(false);
     safeSetLocalStorage('hotel_closure_in_progress', false);
     localStorage.removeItem('hotel_closure_in_progress');
@@ -1822,22 +1839,25 @@ export default function App() {
   if (userProfile.rol === 'visor') {
     return (
       <>
-        <OwnerMobileView
-          rooms={rooms}
-          clients={clients}
-          products={products}
-          sales={sales}
-          expenses={expenses}
-          shifts={shifts}
-          closures={closures}
-          reservations={reservations}
-          userProfile={userProfile}
-          onlineStatus={onlineStatus}
-          onLogout={handleFirebaseLogout}
-          hotelSettings={hotelSettings}
-          systemAlerts={systemAlerts}
-          dailyReport={dailyReport}
-        />
+        <ErrorBoundary fallbackMessage="No se pudo abrir el panel del propietario.">
+          <Suspense fallback={<p role="status">Cargando panel…</p>}>
+          <OwnerMobileView
+            rooms={rooms}
+            products={products}
+            sales={sales}
+            expenses={expenses}
+            shifts={shifts}
+            closures={closures}
+            reservations={reservations}
+            userProfile={userProfile}
+            onlineStatus={onlineStatus}
+            onLogout={handleFirebaseLogout}
+            hotelSettings={hotelSettings}
+            systemAlerts={systemAlerts}
+            dailyReport={dailyReport}
+          />
+          </Suspense>
+        </ErrorBoundary>
         {renderGlobalModals()}
       </>
     );
@@ -2071,13 +2091,13 @@ export default function App() {
 
         <ErrorBoundary fallbackMessage={`Error en la vista: ${activeTab.toUpperCase()}. Por favor, reinicie el módulo.`}>
           
+          <Suspense fallback={<p role="status">Cargando módulo…</p>}>
           {activeTab === 'inicio' && (
             <InicioView
               activeShift={activeShift}
               rooms={rooms}
-              clients={clients}
               products={products}
-              reservations={reservations}
+              reservations={userProfile.rol === 'admin' ? reservations : undefined}
               onTriggerLogOut={handleForceLockShift}
               onLogout={handleFirebaseLogout}
             />
@@ -2146,7 +2166,7 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'reservas' && (
+          {activeTab === 'reservas' && userProfile.rol === 'admin' && (
             <ReservasView
               reservations={reservations}
               rooms={rooms}
@@ -2168,12 +2188,13 @@ export default function App() {
             />
           )}
 
+          </Suspense>
         </ErrorBoundary>
       </main>
 
       {/* Bottom Fixed Navigation Menu */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-900 shadow-2xl pb-safe">
-        <div className="max-w-4xl mx-auto grid grid-cols-8 gap-0.5 px-1 py-1 sm:py-1.5">
+        <div className={`max-w-4xl mx-auto grid gap-0.5 px-1 py-1 sm:py-1.5 ${userProfile.rol === 'admin' ? 'grid-cols-8' : 'grid-cols-7'}`}>
           
           <button
             onClick={() => handleTabChange('inicio')}
@@ -2235,7 +2256,7 @@ export default function App() {
             <span className="text-[8px] sm:text-[9px] mt-1 truncate">Client.</span>
           </button>
 
-          <button
+          {userProfile.rol === 'admin' && <button
             onClick={() => handleTabChange('reservas')}
             className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-all ${
               activeTab === 'reservas' ? 'bg-slate-950 text-emerald-400 font-bold' : 'text-slate-400 hover:text-white'
@@ -2243,7 +2264,7 @@ export default function App() {
           >
             <Calendar className="h-4 w-4" />
             <span className="text-[8px] sm:text-[9px] mt-1 truncate">Reserv.</span>
-          </button>
+          </button>}
 
           <button
             onClick={() => handleTabChange('cierre')}

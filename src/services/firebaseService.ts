@@ -550,7 +550,11 @@ export async function syncPendingOperationsToFirestore(): Promise<{ success: boo
     return { success: false, remaining: loadPendingSync().length };
   }
 
-  let pending = loadPendingSync();
+  if (!cachedUserProfile || cachedUserProfile.uid !== auth?.currentUser?.uid || cachedUserProfile.rol === 'visor') {
+    return { success: false, remaining: loadPendingSync().length };
+  }
+
+  const pending = loadPendingSync();
   if (pending.length === 0) {
     return { success: true, remaining: 0 };
   }
@@ -861,8 +865,9 @@ export const subscribeToCollection = <T>(
 
   // Mostrar inmediatamente un respaldo local REPARADO mientras llega Firestore.
   // Así la interfaz nunca se queda mostrando un catálogo antiguo de 4 productos.
-  let localCached = loadLocalCollection<T>(collectionName);
-  if (collectionName === 'hotel_products') {
+  const readOnly = cachedUserProfile?.rol === 'visor';
+  let localCached = readOnly ? [] : loadLocalCollection<T>(collectionName);
+  if (!readOnly && collectionName === 'hotel_products') {
     const source = (localCached.length > 0 ? localCached : loadInitialProducts()) as any[];
     const { consolidated } = reconcileAndSyncKodiakProducts(
       source,
@@ -890,6 +895,11 @@ export const subscribeToCollection = <T>(
         docId: docSnap.id 
       });
     });
+
+    if (readOnly) {
+      callback(remoteItems as T[]);
+      return;
+    }
 
     if (collectionName === 'hotel_products') {
       console.log("Firebase projectId:", firebaseConfig.projectId || "(no configurado)");
@@ -972,6 +982,8 @@ export const subscribeToCollection = <T>(
     });
   }, (error) => {
     logFirestoreError('read', collectionName, 'query', error, 'firebaseService.ts');
+
+    if (readOnly) return;
 
     // Si Firebase falla, la app NO queda vacía. Para productos usamos el catálogo
     // local reparado; para las demás colecciones conservamos el comportamiento previo.
